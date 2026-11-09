@@ -383,6 +383,7 @@ function viewSettings() {
   const timeIn = h('input', { type: 'time', value: S.remind || '06:30' });
   const fileIn = h('input', { type: 'file', accept: 'application/json', style: 'display:none', onchange: importData });
   return [
+    ...installCard(),
     h('div', { class: 'card' }, h('h2', null, 'Rappel quotidien'),
       h('p', { class: 'muted small' }, 'Génère un rappel dans le calendrier de votre téléphone, répété du lundi au samedi pendant 312 jours. Il fonctionne même quand l’application est fermée.'),
       h('label', { class: 'f' }, 'Heure du rappel'), timeIn,
@@ -402,6 +403,29 @@ function viewSettings() {
       h('p', null, 'Texte biblique : Louis Segond (1910), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
       h('p', null, 'Aucune donnée personnelle n’est collectée ni envoyée.'))
   ];
+}
+
+/* ---------- Installation sur l'écran d'accueil ---------- */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (V.tab === 'settings') render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; if (V.tab === 'settings') render(); });
+function installCard() {
+  if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) return [];
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in document);
+  const inApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|GSA\//.test(ua);
+  let body;
+  if (installEvt) {
+    body = [h('p', { class: 'muted small' }, 'Ajoutez l’application sur l’écran d’accueil : elle s’ouvre en plein écran et fonctionne hors connexion.'),
+      h('button', { class: 'btn', onclick: async () => { installEvt.prompt(); await installEvt.userChoice; installEvt = null; render(); } }, 'Installer l’application')];
+  } else if (inApp) {
+    body = [h('p', { class: 'muted small' }, 'Vous êtes dans le navigateur intégré d’une autre application, qui ne permet pas l’installation. Ouvrez ce lien dans ' + (ios ? 'Safari' : 'Chrome') + ' (menu ⋯ → « Ouvrir dans le navigateur »).')];
+  } else if (ios) {
+    body = [h('p', { class: 'muted small' }, 'Sur iPhone, l’installation se fait depuis Safari : touchez le bouton Partager (carré avec une flèche vers le haut), puis « Sur l’écran d’accueil » et « Ajouter ».')];
+  } else {
+    body = [h('p', { class: 'muted small' }, 'Dans Chrome, touchez le menu ⋮ en haut à droite, puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».')];
+  }
+  return [h('div', { class: 'card' }, h('h2', null, 'Installer sur le téléphone'), ...body)];
 }
 
 function downloadBlob(name, type, content) {
