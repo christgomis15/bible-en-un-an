@@ -194,7 +194,7 @@ function versetDeLheure(d = new Date()) {
   const L = window.VERSETS || [];
   if (!L.length) return null;
   const jour = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
-  return L[(jour * 24 + d.getHours()) % L.length];
+  return L[((jour * 24 + d.getHours()) * 47) % L.length]; // ×47 : mélange l'ordre des versets
 }
 function hourCard() {
   const v = versetDeLheure(); if (!v) return null;
