@@ -98,5 +98,9 @@ input[type=date],input[type=time]{font:inherit;padding:9px 10px;border:1px solid
 .tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
 .tabs button{flex:1;border:0;background:transparent;color:var(--muted);padding:8px 2px 9px;font:inherit;font-size:.72rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px}
 .tabs button .ic{font-size:1.25rem;line-height:1.2}
+.tabs button{position:relative;-webkit-tap-highlight-color:transparent;transition:color .15s}
+.tabs button .ic{padding:2px 16px;border-radius:999px;transition:background .15s}
 .tabs button.on{color:var(--brand);font-weight:700}
-@media (prefers-color-scheme:dark){.tabs button.on{color:var(--gold)}}
+.tabs button.on .ic{background:var(--gold-soft)}
+.tabs button.on::before{content:"";position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}
+@media (prefers-color-scheme:dark){.tabs button.on{color:var(--gold)}.tabs button.on::before{background:var(--gold)}}
