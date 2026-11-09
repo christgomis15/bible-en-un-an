@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bible en un an</title>
+<meta name="description" content="Lire et méditer toute la Bible en un an, du lundi au samedi (Louis Segond 1910).">
+<meta name="theme-color" content="#2b3a67">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div>
+      <h1>Bible en un an</h1>
+      <p class="sub" id="sub">Lundi – samedi · Louis Segond 1910</p>
+    </div>
+  </div>
+</header>
+
+<main id="view" aria-live="polite">
+  <p class="loading">Chargement…</p>
+</main>
+
+<nav class="tabs" id="tabs" aria-label="Navigation principale">
+  <button data-tab="today" class="on"><span class="ic">📖</span>Aujourd’hui</button>
+  <button data-tab="plan"><span class="ic">🗓️</span>Plan</button>
+  <button data-tab="progress"><span class="ic">📈</span>Progression</button>
+  <button data-tab="settings"><span class="ic">⚙️</span>Réglages</button>
+</nav>
+
+<script src="data/lsg.js"></script>
+<script src="data/plan.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
