@@ -165,7 +165,7 @@ function render() {
   view.replaceChildren();
   if (!S.start) { view.append(welcome()); return; }
   const fn = { today: viewToday, plan: viewPlan, progress: viewProgress, settings: viewSettings }[V.tab];
-  view.append(...[].concat(fn()));
+  view.append(...[].concat(fn()).filter(Boolean));
   window.scrollTo(0, 0);
 }
 
@@ -188,7 +188,39 @@ function startOn(s) {
   S.start = iso(d); save(); V.tab = 'today'; V.day = null; render();
 }
 
+/* ---------- Parole de l'heure ---------- */
+// Même calcul que le serveur (api/envoyer.js) : la notification et la carte affichent le même verset.
+function versetDeLheure(d = new Date()) {
+  const L = window.VERSETS || [];
+  if (!L.length) return null;
+  const jour = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+  return L[(jour * 24 + d.getHours()) % L.length];
+}
+function hourCard() {
+  const v = versetDeLheure(); if (!v) return null;
+  const card = h('div', { class: 'card hour-verse' },
+    h('div', { class: 'kicker' }, `Parole de l’heure · ${pad(new Date().getHours())} h`),
+    h('blockquote', null, v.t),
+    h('div', { class: 'ref' }, v.r),
+    h('p', { class: 'muted small' }, '« C’est de l’abondance du cœur que la bouche parle » (Luc 6:45). Remplissons notre cœur de la Parole de Dieu.'));
+  return card;
+}
+// Change de verset au début de chaque heure si l'appli reste ouverte.
+let hourTimer = null;
+function scheduleHourRefresh() {
+  clearTimeout(hourTimer);
+  const n = new Date(), ms = (60 - n.getMinutes()) * 60000 - n.getSeconds() * 1000 + 500;
+  hourTimer = setTimeout(() => { const el = $('.hour-verse'); if (el) el.replaceWith(hourCard()); scheduleHourRefresh(); }, ms);
+}
+
 function viewToday() {
+  const out = [].concat(viewTodayInner());
+  const cur = S.start && stateOn(today());
+  const onToday = !cur || cur.k !== 'day' || V.day === cur.n;
+  if (onToday) { out.unshift(hourCard()); scheduleHourRefresh(); }
+  return out;
+}
+function viewTodayInner() {
   const t = today(), st = stateOn(t);
   if (st.k === 'before') {
     return h('div', { class: 'card center' }, h('h2', null, 'Le plan commence bientôt'),
@@ -384,6 +416,7 @@ function viewSettings() {
   const fileIn = h('input', { type: 'file', accept: 'application/json', style: 'display:none', onchange: importData });
   return [
     ...installCard(),
+    ...pushCard(),
     h('div', { class: 'card' }, h('h2', null, 'Rappel quotidien'),
       h('p', { class: 'muted small' }, 'Génère un rappel dans le calendrier de votre téléphone, répété du lundi au samedi pendant 312 jours. Il fonctionne même quand l’application est fermée.'),
       h('label', { class: 'f' }, 'Heure du rappel'), timeIn,
@@ -426,6 +459,53 @@ function installCard() {
     body = [h('p', { class: 'muted small' }, 'Dans Chrome, touchez le menu ⋮ en haut à droite, puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».')];
   }
   return [h('div', { class: 'card' }, h('h2', null, 'Installer sur le téléphone'), ...body)];
+}
+
+/* ---------- Notifications : un verset chaque heure ---------- */
+const PUSH_PRET = false; // passe à true une fois le serveur d'envoi (api/) en ligne
+const VAPID_PUBLIC = 'BGznV46AK-R3uZDIjAiCMBf3X_2aOv5CAx9nSAa0-ULbrH-bD7efKeq2lykVg6K5aaDvOV9Jprd-DjvgaquZkv8';
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+let pushSub; // undefined = pas encore vérifié
+function b64ToBytes(s) {
+  const b = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(b, c => c.charCodeAt(0));
+}
+async function sendSub(sub, method) {
+  const r = await fetch('api/abonnement', { method, headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subscription: sub, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, from: S.pushFrom, to: S.pushTo }) });
+  if (!r.ok) throw new Error('serveur ' + r.status);
+}
+async function pushOn() {
+  if (await Notification.requestPermission() !== 'granted') { alert('Les notifications sont refusées. Autorisez-les dans les réglages du téléphone pour cette application.'); return; }
+  const reg = await navigator.serviceWorker.ready;
+  const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(VAPID_PUBLIC) });
+  await sendSub(sub, 'POST'); pushSub = sub;
+}
+async function pushOff() {
+  const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+  if (sub) { try { await sendSub(sub, 'DELETE'); } catch (e) {} await sub.unsubscribe(); }
+  pushSub = null;
+}
+function pushCard() {
+  if (!PUSH_PRET) return [];
+  S.pushFrom ??= 7; S.pushTo ??= 21;
+  const title = h('h2', null, 'Un verset chaque heure');
+  const intro = h('p', { class: 'muted small' }, 'Recevez une parole d’encouragement toutes les heures, même quand l’application est fermée : Dieu n’abandonne pas ses enfants.');
+  if (!pushSupported()) return [h('div', { class: 'card' }, title, intro, h('p', { class: 'small' }, 'Ce navigateur ne permet pas les notifications.'))];
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  if (ios && !(matchMedia('(display-mode: standalone)').matches || navigator.standalone))
+    return [h('div', { class: 'card' }, title, intro, h('p', { class: 'small' }, 'Sur iPhone, installez d’abord l’application sur l’écran d’accueil (voir ci-dessus), puis ouvrez-la depuis son icône pour activer les notifications.'))];
+  if (pushSub === undefined) navigator.serviceWorker.ready.then(r => r.pushManager.getSubscription()).then(s => { pushSub = s; if (V.tab === 'settings') render(); });
+  const hours = sel => h('select', { onchange: e => { S[sel] = +e.target.value; save(); if (pushSub) sendSub(pushSub, 'POST').catch(() => {}); } },
+    Array.from({ length: 24 }, (_, i) => h('option', { value: i, selected: S[sel] === i }, `${pad(i)} h`)));
+  const status = h('p', { class: 'small' });
+  const run = fn => async () => { status.textContent = 'Un instant…'; try { await fn(); status.textContent = ''; render(); } catch (e) { status.textContent = 'Échec : vérifiez votre connexion et réessayez.'; } };
+  return [h('div', { class: 'card' }, title, intro,
+    h('label', { class: 'f' }, 'Entre'), h('div', { class: 'hours' }, hours('pushFrom'), h('span', null, 'et'), hours('pushTo')),
+    pushSub ? h('p', { class: 'small ok-txt' }, '✓ Activé sur cet appareil') : null,
+    h('p', null, pushSub ? h('button', { class: 'btn alt', onclick: run(pushOff) }, 'Désactiver')
+      : h('button', { class: 'btn', onclick: run(pushOn) }, 'Activer les notifications')),
+    status)];
 }
 
 function downloadBlob(name, type, content) {

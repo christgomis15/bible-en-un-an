@@ -104,3 +104,12 @@ input[type=date],input[type=time]{font:inherit;padding:9px 10px;border:1px solid
 .tabs button.on .ic{background:var(--gold-soft)}
 .tabs button.on::before{content:"";position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}
 @media (prefers-color-scheme:dark){.tabs button.on{color:var(--gold)}.tabs button.on::before{background:var(--gold)}}
+
+/* Parole de l'heure */
+.hour-verse{background:linear-gradient(135deg,var(--card),var(--gold-soft));border-color:var(--gold)}
+.hour-verse blockquote{margin:8px 0 4px;font-family:var(--serif);font-size:1.12rem;line-height:1.55}
+.hour-verse .ref{font-weight:700;color:var(--gold);font-size:.9rem}
+.hour-verse p{margin:10px 0 0}
+.hours{display:flex;align-items:center;gap:10px}
+.hours select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.ok-txt{color:var(--ok);font-weight:600}
