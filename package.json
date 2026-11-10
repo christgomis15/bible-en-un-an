@@ -1,0 +1,9 @@
+{
+  "name": "bible-en-un-an",
+  "private": true,
+  "description": "Serveur d'envoi de la « parole de l'heure » (fonctions Vercel du dossier api/). Le site lui-même n'a besoin d'aucune compilation.",
+  "dependencies": {
+    "@vercel/blob": "2.8.1",
+    "web-push": "3.6.7"
+  }
+}
