@@ -434,7 +434,7 @@ function viewSettings() {
       h('button', { class: 'btn alt', onclick: () => { if (confirm('Effacer toute la progression et recommencer ?')) { S = { start: null, done: {}, verses: {}, font: 19, remind: '06:30' }; save(); V.day = null; V.tab = 'today'; render(); } } }, 'Tout réinitialiser')),
     h('div', { class: 'card small muted' },
       h('p', null, 'Texte biblique : Louis Segond (1910), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
-      h('p', null, 'Aucune donnée personnelle n’est collectée ni envoyée.'))
+      h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez « Un verset chaque heure », seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et votre plage d’heures sont conservés, et ils sont effacés dès que vous désactivez.'))
   ];
 }
 
@@ -462,7 +462,7 @@ function installCard() {
 }
 
 /* ---------- Notifications : un verset chaque heure ---------- */
-const PUSH_PRET = false; // passe à true une fois le serveur d'envoi (api/) en ligne
+const PUSH_PRET = true; // false masque la carte des notifications
 const VAPID_PUBLIC = 'BGznV46AK-R3uZDIjAiCMBf3X_2aOv5CAx9nSAa0-ULbrH-bD7efKeq2lykVg6K5aaDvOV9Jprd-DjvgaquZkv8';
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 let pushSub; // undefined = pas encore vérifié

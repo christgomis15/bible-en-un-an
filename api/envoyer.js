@@ -3,6 +3,7 @@
 const webpush = require('web-push');
 const { put, del, list, head } = require('@vercel/blob');
 const VERSETS = require('./_versets.js');
+const VAPID_APPLI = 'BGznV46AK-R3uZDIjAiCMBf3X_2aOv5CAx9nSAa0-ULbrH-bD7efKeq2lykVg6K5aaDvOV9Jprd-DjvgaquZkv8'; // = VAPID_PUBLIC dans app.js
 
 // Même calcul que versetDeLheure() dans app.js
 function verset(y, m, d, h) {
@@ -23,8 +24,15 @@ async function tousLesAbonnements() {
 }
 
 module.exports = async (req, res) => {
-  if (!process.env.VAPID_PUBLIC || !process.env.VAPID_PRIVATE) return res.status(500).json({ error: 'clés VAPID manquantes' });
-  webpush.setVapidDetails('https://bible-en-un-an.vercel.app', process.env.VAPID_PUBLIC, process.env.VAPID_PRIVATE);
+  const pub = (process.env.VAPID_PUBLIC || '').trim(), priv = (process.env.VAPID_PRIVATE || '').trim();
+  if (!pub || !priv) return res.status(500).json({ error: 'clés VAPID manquantes' });
+  // Vérifie que la clé privée correspond bien à la clé publique (erreur de copier-coller)
+  let derivee = '';
+  try { const e = require('crypto').createECDH('prime256v1'); e.setPrivateKey(Buffer.from(priv, 'base64url')); derivee = e.getPublicKey().toString('base64url'); } catch (e) { /* clé illisible */ }
+  if (derivee !== pub) return res.status(500).json({ error: 'clés VAPID incohérentes' });
+  if (pub !== VAPID_APPLI) return res.status(500).json({ error: 'clé publique différente de celle de l’appli' });
+  webpush.setVapidDetails('https://bible-en-un-an.vercel.app', pub, priv);
+  if (req.query && req.query.verifier !== undefined) return res.status(200).json({ ok: true, cles: 'valides' });
 
   const now = new Date();
   const cle = `envois/${now.toISOString().slice(0, 13)}.json`;
