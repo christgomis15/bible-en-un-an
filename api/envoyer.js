@@ -64,5 +64,6 @@ module.exports = async (req, res) => {
     const aSuppr = vieux.filter(x => new Date(x.uploadedAt).getTime() < limite).map(x => x.url);
     if (aSuppr.length) await del(aSuppr);
   }
+  console.log(`parole de l'heure : ${blobs.length} abonnés, ${envoyes} envoyés, ${supprimes} supprimés, ${erreurs} erreurs`);
   res.status(200).json({ ok: true, abonnes: blobs.length, envoyes, supprimes, erreurs });
 };
