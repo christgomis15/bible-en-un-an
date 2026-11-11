@@ -210,8 +210,44 @@ let hourTimer = null;
 function scheduleHourRefresh() {
   clearTimeout(hourTimer);
   const n = new Date(), ms = (60 - n.getMinutes()) * 60000 - n.getSeconds() * 1000 + 500;
-  hourTimer = setTimeout(() => { const el = $('.hour-verse'); if (el) el.replaceWith(hourCard()); scheduleHourRefresh(); }, ms);
+  hourTimer = setTimeout(() => {
+    const el = $('.hour-verse'); if (el) el.replaceWith(hourCard());
+    if (bubbleOpen()) fillBubble(); updateFab();
+    scheduleHourRefresh();
+  }, ms);
 }
+
+/* Bulle « Parole de l'heure » : bouton flottant visible sur toutes les pages,
+   qui s'ouvre tout seul la première fois que l'appli est ouverte dans l'heure
+   (ou quand on touche la notification), et reste disponible jusqu'à l'heure suivante. */
+const hourStamp = (d = new Date()) => `${iso(d)}T${pad(d.getHours())}`;
+let VU = ''; try { VU = localStorage.getItem('bible-an-vu') || ''; } catch (e) {}
+const markSeen = () => { VU = hourStamp(); try { localStorage.setItem('bible-an-vu', VU); } catch (e) {} };
+const fab = h('button', { class: 'fab', 'aria-label': 'Parole de l’heure', onclick: () => openBubble() }, h('span', null, '✨'));
+const bubble = h('div', { class: 'bubble-back', hidden: true, onclick: e => { if (e.target === bubble) closeBubble(); } },
+  h('div', { class: 'bubble', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'bubble-k' }));
+const bubbleOpen = () => !bubble.hidden;
+function fillBubble() {
+  const v = versetDeLheure(); if (!v) return;
+  const n = new Date(), next = (n.getHours() + 1) % 24;
+  bubble.firstChild.replaceChildren(
+    h('div', { class: 'kicker', id: 'bubble-k' }, `Parole de l’heure · ${pad(n.getHours())} h`),
+    h('blockquote', null, v.t),
+    h('div', { class: 'ref' }, v.r),
+    h('p', { class: 'muted small' }, `Gardez cette parole dans votre cœur : un nouveau verset vous attend à ${pad(next)}00a0h.`),
+    h('button', { class: 'btn', onclick: closeBubble }, 'Amen'));
+}
+function openBubble() {
+  if (!window.VERSETS || !VERSETS.length) return;
+  fillBubble(); bubble.hidden = false; markSeen(); updateFab();
+  bubble.querySelector('.btn').focus();
+}
+function closeBubble() { bubble.hidden = true; fab.focus(); }
+function updateFab() { fab.classList.toggle('new', VU !== hourStamp()); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && bubbleOpen()) closeBubble(); });
+// Ouverture automatique : une fois par heure, au retour dans l'appli
+function maybeAutoOpen() { if (S.start && VU !== hourStamp() && !bubbleOpen()) openBubble(); else updateFab(); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') maybeAutoOpen(); });
 
 function viewToday() {
   const out = [].concat(viewTodayInner());
@@ -547,6 +583,14 @@ document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click
 
 if (window.BIBLE_LSG && window.BIBLE_PLAN) {
   LSG = window.BIBLE_LSG; PLAN = window.BIBLE_PLAN; TOTAL_CHARS = PLAN.reduce((a, d) => a + d.n, 0); render();
+  if (window.VERSETS && VERSETS.length) {
+    document.body.append(fab, bubble); scheduleHourRefresh();
+    const fromNotif = new URLSearchParams(location.search).has('verset');
+    if (fromNotif) history.replaceState(null, '', location.pathname);
+    if (fromNotif) openBubble(); else maybeAutoOpen();
+    // Notification touchée alors que l'appli était déjà ouverte
+    if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'verset') openBubble(); });
+  }
 } else {
   view.replaceChildren(h('div', { class: 'card' }, h('h2', null, 'Chargement impossible'),
     h('p', null, 'Les fichiers de données (dossier « data ») sont introuvables. Vérifiez que tout le dossier a bien été décompressé.')));

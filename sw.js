@@ -1,5 +1,5 @@
 // Service worker : fonctionnement hors ligne (stale-while-revalidate) + notifications
-const CACHE = 'bible-an-v7';
+const CACHE = 'bible-an-v8';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'data/lsg.js', 'data/plan.js', 'data/versets.js', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -18,19 +18,31 @@ self.addEventListener('fetch', e => {
   }));
 });
 
+// Liste des versets, pour afficher le verset même si le message du serveur arrive vide
+self.window = self;
+try { importScripts('data/versets.js'); } catch (err) {}
+function versetLocal() {
+  const L = self.VERSETS || [], d = new Date();
+  if (!L.length) return null;
+  const jour = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+  return L[((jour * 24 + d.getHours()) * 47) % L.length]; // même calcul que app.js
+}
+
 // Parole de l'heure envoyée par le serveur
 self.addEventListener('push', e => {
   let d = {};
-  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data && e.data.text() }; }
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = {}; }
+  if (!d.body) { const v = versetLocal(); if (v) d = { title: `Parole de l’heure · ${v.r}`, body: v.t }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Parole de l’heure', {
     body: d.body || 'Ouvrez l’application pour lire la parole de l’heure.',
     icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: 'parole-de-l-heure', renotify: true, lang: 'fr'
   }));
 });
+// Toucher la notification ouvre l'appli avec la bulle du verset
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
-    for (const c of cs) if ('focus' in c) return c.focus();
-    return self.clients.openWindow('./');
+    for (const c of cs) if ('focus' in c) { c.postMessage({ type: 'verset' }); return c.focus(); }
+    return self.clients.openWindow('./?verset=1');
   }));
 });

@@ -113,3 +113,22 @@ input[type=date],input[type=time]{font:inherit;padding:9px 10px;border:1px solid
 .hours{display:flex;align-items:center;gap:10px}
 .hours select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 .ok-txt{color:var(--ok);font-weight:600}
+
+/* Bulle « Parole de l'heure » */
+.fab{position:fixed;right:16px;bottom:calc(74px + env(safe-area-inset-bottom));z-index:6;width:54px;height:54px;border-radius:50%;
+  border:2px solid var(--gold);background:var(--brand);color:#fff;font-size:1.45rem;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center}
+.fab.new::after{content:"";position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:50%;background:var(--warn);border:2px solid var(--card)}
+.fab.new{animation:fab-pulse 2s ease-in-out infinite}
+@keyframes fab-pulse{0%,100%{box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 0 rgba(184,134,43,.55)}50%{box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 10px rgba(184,134,43,0)}}
+@media (prefers-reduced-motion:reduce){.fab.new{animation:none}}
+.bubble-back{position:fixed;inset:0;z-index:20;background:rgba(10,12,20,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.bubble-back[hidden]{display:none}
+.bubble{width:100%;max-width:520px;background:linear-gradient(160deg,var(--card),var(--gold-soft));border:1px solid var(--gold);
+  border-radius:20px;padding:20px 18px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35);animation:bubble-in .25s ease-out}
+@keyframes bubble-in{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.bubble{animation:none}}
+.bubble blockquote{margin:10px 0 6px;font-family:var(--serif);font-size:1.2rem;line-height:1.55}
+.bubble .ref{font-weight:700;color:var(--gold)}
+.bubble .btn{width:100%;margin-top:12px}
+@media (min-width:600px){.bubble-back{align-items:center}}
