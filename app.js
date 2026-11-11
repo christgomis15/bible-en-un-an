@@ -234,7 +234,7 @@ function fillBubble() {
     h('div', { class: 'kicker', id: 'bubble-k' }, `Parole de l’heure · ${pad(n.getHours())} h`),
     h('blockquote', null, v.t),
     h('div', { class: 'ref' }, v.r),
-    h('p', { class: 'muted small' }, `Gardez cette parole dans votre cœur : un nouveau verset vous attend à ${pad(next)}00a0h.`),
+    h('p', { class: 'muted small' }, `Gardez cette parole dans votre cœur : un nouveau verset vous attend à ${pad(next)} h.`),
     h('button', { class: 'btn', onclick: closeBubble }, 'Amen'));
 }
 function openBubble() {
