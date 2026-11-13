@@ -1,0 +1,206 @@
+<title>Descriptif Bible en un an</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Mise en page : une colonne de lecture (comme l'appli), sommaire en pastilles, sections numérotées par écran de l'appli */
+:root{
+  --bg:#f6f1e7; --card:#fffdf8; --ink:#1f2433; --muted:#5f6475; --line:#e4dccb;
+  --brand:#2b3a67; --gold:#9a6d1c; --gold-soft:#f3e4bf; --ok:#2e7d4f;
+  --serif:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,"Times New Roman",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14171f; --card:#1b1f2a; --ink:#ebe8df; --muted:#a3a7b6; --line:#2b3040;
+  --brand:#8da2e0; --gold:#e0b25a; --gold-soft:#3a3120; --ok:#6cc58e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14171f; --card:#1b1f2a; --ink:#ebe8df; --muted:#a3a7b6; --line:#2b3040;
+  --brand:#8da2e0; --gold:#e0b25a; --gold-soft:#3a3120; --ok:#6cc58e; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6}
+.wrap{max-width:720px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header .kicker,.kicker{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:700}
+h1{font-family:var(--serif);font-weight:400;font-size:2.1rem;line-height:1.15;margin:4px 0 10px;text-wrap:balance}
+h2{font-family:var(--serif);font-weight:400;font-size:1.45rem;margin:0 0 8px;text-wrap:balance}
+h3{font-size:1rem;margin:18px 0 4px}
+p{margin:0 0 10px}
+.lead{font-size:1.05rem}
+.meta{color:var(--muted);font-size:.85rem}
+a{color:var(--brand)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:20px 0 6px}
+nav a{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:5px 12px;font-size:.85rem;text-decoration:none;color:var(--ink)}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 18px;margin:16px 0}
+section.plain{background:transparent;border:0;padding:0 2px}
+ul,ol{margin:0 0 10px;padding-left:1.3em}
+li{margin:3px 0}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0 4px}
+.fact{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
+.fact b{display:block;font-family:var(--serif);font-size:1.5rem;font-weight:400;color:var(--brand);font-variant-numeric:tabular-nums}
+.fact span{font-size:.82rem;color:var(--muted)}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding-left:34px;margin:8px 0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:50%;background:var(--gold-soft);color:var(--ink);font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.days{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 14px;margin:6px 0 10px;padding:0;list-style:none}
+.days li{font-size:.92rem}
+.days b{color:var(--gold);font-weight:700;display:inline-block;min-width:70px}
+.dots{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+.dots i{width:22px;height:22px;border-radius:50%;display:inline-block}
+.note{border-left:3px solid var(--gold);padding:4px 0 4px 12px;color:var(--muted);font-size:.92rem;margin:10px 0}
+.log{list-style:none;padding:0;margin:0}
+.log li{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line);margin:0}
+.log li:first-child{border-top:0}
+.log time{color:var(--gold);font-weight:700;font-size:.85rem;font-variant-numeric:tabular-nums;padding-top:2px}
+.log div{min-width:0}
+.tech dt{font-weight:700;font-size:.92rem;margin-top:8px}
+.tech dd{margin:0 0 4px;color:var(--muted);font-size:.92rem}
+@media (max-width:420px){h1{font-size:1.75rem}.log li{grid-template-columns:1fr;gap:0}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="kicker">Descriptif de fonctionnement</div>
+  <h1>Bible en un an</h1>
+  <p class="lead">Une application pour lire et méditer toute la Bible en une année, du lundi au samedi, avec chaque heure une parole d’encouragement : « C’est de l’abondance du cœur que la bouche parle » (Luc 6:45).</p>
+  <p class="meta">Adresse : <a href="https://bible-en-un-an.vercel.app" target="_blank" rel="noopener">bible-en-un-an.vercel.app</a> · Mis à jour le 13 novembre 2026</p>
+  <div class="facts">
+    <div class="fact"><b>312</b><span>jours de lecture, du lundi au samedi</span></div>
+    <div class="fact"><b>8 à 16 min</b><span>de lecture par jour</span></div>
+    <div class="fact"><b>130</b><span>versets d’encouragement pour la parole de l’heure</span></div>
+    <div class="fact"><b>12</b><span>couleurs de surlignage</span></div>
+  </div>
+  <nav aria-label="Sommaire">
+    <a href="#installer">Installer</a><a href="#demarrer">Démarrer</a><a href="#aujourdhui">Aujourd’hui</a><a href="#surligner">Surligner</a>
+    <a href="#parole">Parole de l’heure</a><a href="#plan">Plan</a><a href="#progression">Progression</a><a href="#reglages">Réglages</a>
+    <a href="#donnees">Données</a><a href="#journal">Évolutions</a>
+  </nav>
+</header>
+
+<section id="installer">
+  <div class="kicker">Avant tout</div>
+  <h2>Installer l’application</h2>
+  <p>L’application est conçue d’abord pour le <b>téléphone</b> et la <b>tablette</b>. Elle fonctionne aussi sur ordinateur, dans le navigateur. Une fois installée, elle a son icône sur l’écran d’accueil, s’ouvre en plein écran et marche <b>sans connexion</b>.</p>
+  <h3>Android</h3>
+  <p>Ouvrir le lien dans Chrome, puis Réglages → « Installer l’application », ou menu ⋮ → « Installer l’application ».</p>
+  <h3>iPhone et iPad</h3>
+  <p>Ouvrir le lien dans Safari, toucher Partager (carré avec une flèche), puis « Sur l’écran d’accueil » et « Ajouter ». Sur iPhone, l’installation est obligatoire pour recevoir les notifications.</p>
+  <h3>Ordinateur</h3>
+  <p>Ouvrir le lien dans Chrome ou Edge ; l’icône ⊕ de la barre d’adresse permet de l’installer.</p>
+  <p class="note">Si le lien est ouvert depuis WhatsApp, Facebook ou Instagram, l’appli le signale : il faut l’ouvrir dans le vrai navigateur pour pouvoir l’installer.</p>
+</section>
+
+<section id="demarrer">
+  <div class="kicker">Premier lancement</div>
+  <h2>Choisir sa date de départ</h2>
+  <p>À la première ouverture, on choisit le jour du début de la lecture (par défaut le lundi suivant), ou « Commencer aujourd’hui ». Tout le calendrier des 312 jours se cale sur cette date. Aucun compte, aucune inscription.</p>
+</section>
+
+<section id="aujourdhui">
+  <div class="kicker">Onglet 1</div>
+  <h2>Aujourd’hui</h2>
+  <p>La page principale, de haut en bas :</p>
+  <ol class="steps">
+    <li><b>Parole de l’heure</b> : un verset d’encouragement qui change chaque heure.</li>
+    <li><b>Le passage du jour</b> (par exemple « Genèse 39–41 »), avec la date et la durée de lecture. Les flèches ‹ › passent au jour précédent ou suivant. Un badge indique « aujourd’hui », « lu ✓ » ou « à rattraper ».</li>
+    <li><b>Le texte</b> en Louis Segond 1910, avec A− / A+ pour la taille des lettres. L’onglet « Bible du Semeur » renvoie vers BibleGateway et YouVersion, car ce texte est protégé par des droits d’auteur.</li>
+    <li><b>La méditation</b> en six étapes : Lire, Observer, Méditer, Retenir, Appliquer, Prier. Les questions changent chaque jour.</li>
+    <li><b>« J’ai terminé la lecture du jour »</b> pour marquer la journée comme lue.</li>
+  </ol>
+  <h3>Un thème de méditation par jour de la semaine</h3>
+  <ul class="days">
+    <li><b>Lundi</b> Dieu se révèle</li>
+    <li><b>Mardi</b> L’être humain devant Dieu</li>
+    <li><b>Mercredi</b> La vérité à croire</li>
+    <li><b>Jeudi</b> Un chemin à suivre</li>
+    <li><b>Vendredi</b> Ma vie, mes relations</li>
+    <li><b>Samedi</b> Reconnaissance et prière</li>
+  </ul>
+  <h3>Le dimanche</h3>
+  <p>Pas de lecture : c’est un jour de repos et de récapitulation, avec des questions pour faire le point, les lectures de la semaine et les versets surlignés pendant la semaine.</p>
+</section>
+
+<section id="surligner">
+  <div class="kicker">Pendant la lecture</div>
+  <h2>Surligner des versets en couleurs</h2>
+  <ol class="steps">
+    <li>Toucher un ou plusieurs versets : ils sont soulignés en pointillé.</li>
+    <li>Un panneau s’ouvre en bas, avec la référence (par exemple « Psaumes 44:3-5 ») et une rangée de pastilles de couleur.</li>
+    <li>Toucher une couleur : les versets sont surlignés.</li>
+    <li>Pour un verset déjà surligné, sa couleur est entourée et une pastille « ✕ Retirer » permet d’enlever le surlignage.</li>
+    <li>« Copier » copie le texte avec sa référence, prêt à partager ; « Annuler » ferme le panneau.</li>
+  </ol>
+  <div class="dots" aria-label="Les 12 couleurs">
+    <i style="background:#f5c518"></i><i style="background:#f08c00"></i><i style="background:#e5484d"></i><i style="background:#e93d82"></i><i style="background:#8e4ec6"></i><i style="background:#3e7bfa"></i><i style="background:#00b4d8"></i><i style="background:#12a594"></i><i style="background:#30a46c"></i><i style="background:#94c11f"></i><i style="background:#a0522d"></i><i style="background:#7a869a"></i>
+  </div>
+  <p>Chacun s’organise librement : les couleurs n’ont pas de nom au départ. Dans Réglages, on peut donner un nom à une couleur (« Combat », « Action de grâce », « Identité en Christ », « Promesses »…), et ce nom apparaît sous la pastille.</p>
+</section>
+
+<section id="parole">
+  <div class="kicker">Chaque heure</div>
+  <h2>La parole de l’heure</h2>
+  <p>Des versets choisis pour encourager, rappeler que nous sommes bénis et que Dieu n’abandonne pas ses enfants. L’idée : remplir son cœur de la Parole de Dieu plutôt que de paroles négatives (Luc 6:45). Le verset change à chaque heure pleine, et tout le monde reçoit le même verset à la même heure.</p>
+  <h3>Trois façons de la recevoir</h3>
+  <ul>
+    <li><b>La carte</b> en haut de la page Aujourd’hui.</li>
+    <li><b>La bulle</b> : elle s’ouvre d’elle-même une fois par heure quand on ouvre l’appli, et reste disponible jusqu’à l’heure suivante grâce au bouton ✨ en bas à droite. Un point orange sur ✨ signale un verset pas encore lu.</li>
+    <li><b>La notification</b>, même quand l’appli est fermée. Le verset entier se lit dans la notification (la déplier sur Android, appui long sur iPhone). La toucher ouvre l’appli sur la bulle.</li>
+  </ul>
+  <p>Les notifications s’activent dans Réglages → « Un verset chaque heure », avec une plage horaire au choix (7 h – 21 h par défaut).</p>
+</section>
+
+<section id="plan">
+  <div class="kicker">Onglet 2</div>
+  <h2>Plan</h2>
+  <p>Les 52 semaines du plan, semaine par semaine, avec le nombre de jours lus. La semaine en cours est ouverte. Un point vert marque une lecture terminée, et les jours en retard sont signalés. Toucher un jour l’ouvre.</p>
+</section>
+
+<section id="progression">
+  <div class="kicker">Onglet 3</div>
+  <h2>Progression</h2>
+  <ul>
+    <li><b>Le pourcentage de la Bible lue</b>, calculé sur la longueur réelle des textes lus.</li>
+    <li>Le nombre de jours lus, de jours d’affilée et de jours à rattraper.</li>
+    <li>En cas de retard, un message sans culpabilité et deux choix : <b>« Reprendre à mon rythme »</b> (le plan est décalé pour que la prochaine lecture non faite devienne celle du jour) ou ouvrir le premier jour non lu.</li>
+    <li><b>Les versets surlignés</b>, du plus récent au plus ancien, avec un filtre par couleur.</li>
+  </ul>
+</section>
+
+<section id="reglages">
+  <div class="kicker">Onglet 4</div>
+  <h2>Réglages</h2>
+  <ul>
+    <li><b>Installer sur le téléphone</b> : bouton ou mode d’emploi adapté au téléphone (disparaît une fois l’appli installée).</li>
+    <li><b>Un verset chaque heure</b> : activer ou couper les notifications, et choisir la plage horaire.</li>
+    <li><b>Mes couleurs de surlignage</b> : nommer chaque couleur et voir combien de versets elle contient.</li>
+    <li><b>Rappel quotidien</b> : ajoute au calendrier du téléphone un rappel de lecture du lundi au samedi, à l’heure choisie.</li>
+    <li><b>Date de départ</b> : changer la date décale tout le calendrier, sans perdre les jours déjà lus.</li>
+    <li><b>Sauvegarde</b> : exporter sa progression dans un fichier, l’importer sur un autre appareil, ou tout réinitialiser.</li>
+  </ul>
+</section>
+
+<section id="donnees">
+  <div class="kicker">Confidentialité</div>
+  <h2>Où sont les données ?</h2>
+  <p>La progression, les versets surlignés et les réglages restent <b>uniquement sur l’appareil</b>. Rien n’est envoyé. C’est pourquoi l’export est utile pour changer de téléphone.</p>
+  <p>Seule exception : quand les notifications sont activées, le serveur garde l’adresse technique de notification du navigateur, le fuseau horaire et la plage d’heures. Ces informations sont effacées dès qu’on désactive les notifications.</p>
+  <p class="note">Texte biblique : Louis Segond 1910, domaine public. La Bible du Semeur (© Biblica) n’est pas incluse.</p>
+</section>
+
+<section id="journal" class="plain">
+  <div class="kicker">Historique</div>
+  <h2>Journal des évolutions</h2>
+  <ul class="log">
+    <li><time datetime="2026-11-13">13 nov. 2026</time><div><b>Surlignage en couleurs.</b> Sélection d’un ou plusieurs versets, 12 couleurs à nommer librement, copie du texte avec sa référence, filtre par couleur dans Progression.</div></li>
+    <li><time datetime="2026-11-11">11 nov. 2026</time><div><b>Bulle de la parole de l’heure</b> et bouton ✨, ouverture depuis la notification, verset complet dans la notification.</div></li>
+    <li><time datetime="2026-11-10">10 nov. 2026</time><div><b>Notifications « Un verset chaque heure »</b>, même appli fermée, avec plage horaire.</div></li>
+    <li><time datetime="2026-11-09">9 nov. 2026</time><div><b>Mise en ligne.</b> Installation sur téléphone (bouton et mode d’emploi), onglet actif du menu mis en évidence, carte « Parole de l’heure ».</div></li>
+  </ul>
+</section>
+
+<section id="coulisses">
+  <div class="kicker">Pour la maintenance</div>
+  <h2>En coulisses</h2>
+  <dl class="tech">
+    <dt>Hébergement</dt><dd>Vercel, relié au dépôt GitHub « bible-en-un-an » : chaque modification envoyée sur GitHub met le site à jour automatiquement.</dd>
+    <dt>Mise à jour des téléphones</dt><dd>L’appli garde une copie pour le hors-ligne ; elle prend la nouvelle version après avoir été fermée puis rouverte (parfois deux fois).</dd>
+    <dt>Notifications</dt><dd>Un envoi automatique chaque heure (tâche planifiée Vercel), avec les abonnements stockés dans Vercel Blob.</dd>
+  </dl>
+</section>
+</div>
