@@ -109,20 +109,34 @@ function h(tag, attrs, ...kids) {
 
 /* ---------- État ---------- */
 let LSG = null, PLAN = null, TOTAL_CHARS = 0;
-// Couleurs de surlignage proposées, et catégories par défaut
-const COULEURS = ['#f5c518', '#f08c00', '#e5484d', '#e93d82', '#8e4ec6', '#3e7bfa', '#12a594', '#30a46c'];
-const CATS_DEFAUT = () => [
-  { id: 'jour', n: 'Verset du jour', c: '#f5c518' },
-  { id: 'combat', n: 'Combat', c: '#e5484d' },
-  { id: 'grace', n: 'Action de grâce', c: '#30a46c' },
-  { id: 'identite', n: 'Identité en Christ', c: '#3e7bfa' }];
+// Couleurs de surlignage : chacun peut donner (ou non) un nom à chaque couleur pour s'organiser
+const COULEURS = ['#f5c518', '#f08c00', '#e5484d', '#e93d82', '#8e4ec6', '#3e7bfa', '#00b4d8', '#12a594', '#30a46c', '#94c11f', '#a0522d', '#7a869a'];
+const CATS_DEFAUT = () => COULEURS.map((c, i) => ({ id: 'c' + i, n: '', c }));
+// Version précédente : 4 catégories nommées imposées → on passe aux couleurs libres (noms modifiés conservés)
+const ANCIENS = { jour: 'Verset du jour', combat: 'Combat', grace: 'Action de grâce', identite: 'Identité en Christ' };
+function migreCats(s) {
+  if (!s.cats.some(c => c.id in ANCIENS)) return;
+  const neuf = CATS_DEFAUT(), map = {};
+  for (const c of s.cats) {
+    let t = neuf.find(x => x.c === c.c && !x.pris);
+    if (!t) { t = { id: c.id, n: '', c: c.c }; neuf.push(t); }
+    t.pris = true; map[c.id] = t.id;
+    if (c.n && c.n !== ANCIENS[c.id]) t.n = c.n;
+  }
+  neuf.forEach(x => delete x.pris);
+  for (const k of Object.keys(s.vc)) if (map[s.vc[k]]) s.vc[k] = map[s.vc[k]];
+  // les versets sans catégorie suivaient la première ancienne catégorie
+  for (const k of Object.values(s.verses).flat()) if (!s.vc[k]) s.vc[k] = map[s.cats[0].id];
+  s.cats = neuf;
+}
 let S = load();
 const V = { tab: 'today', day: null, ver: 'lsg', sel: new Set(), selDay: null };
 
 function norm(s) {
   s = Object.assign({ start: null, done: {}, verses: {}, font: 19, remind: '06:30' }, s || {});
   if (!Array.isArray(s.cats) || !s.cats.length) s.cats = CATS_DEFAUT();
-  if (!s.vc || typeof s.vc !== 'object') s.vc = {}; // verset → catégorie
+  if (!s.vc || typeof s.vc !== 'object') s.vc = {}; // verset → couleur
+  migreCats(s);
   return s;
 }
 function load() {
@@ -315,7 +329,7 @@ function reading(n, st) {
       h('li', null, h('h4', null, 'Lire'), h('p', null, 'Lisez le passage lentement, si possible à voix haute. Une seule lecture attentive vaut mieux que deux lectures pressées.')),
       h('li', null, h('h4', null, 'Observer'), h('p', null, pick(OBSERVER))),
       h('li', null, h('h4', null, 'Méditer'), h('p', null, theme.q[(wk + n) % theme.q.length])),
-      h('li', null, h('h4', null, 'Retenir'), h('p', null, 'Touchez un ou plusieurs versets du texte, puis choisissez une couleur pour les ranger dans une catégorie (combat, action de grâce, identité en Christ…).')),
+      h('li', null, h('h4', null, 'Retenir'), h('p', null, 'Touchez un ou plusieurs versets du texte, puis choisissez une couleur pour les surligner.')),
       h('li', null, h('h4', null, 'Appliquer'), h('p', null, pick(APPLIQUER, 1))),
       h('li', null, h('h4', null, 'Prier'), h('p', null, pick(PRIER, 2)))));
 
@@ -405,30 +419,44 @@ function finishSel() {
   updateSelBar();
 }
 function refOf(key) { const [b, c, v] = key.split('.').map(Number); return { b, c, v, txt: LSG[b][c - 1][v - 1] }; }
+// « Psaumes 44:3-5, 8 » : versets regroupés par chapitre, suites de versets abrégées
+function refLabel(ks) {
+  const groups = [];
+  for (const r of ks.map(refOf)) {
+    const g = groups[groups.length - 1];
+    if (g && g.b === r.b && g.c === r.c) g.v.push(r.v); else groups.push({ b: r.b, c: r.c, v: [r.v] });
+  }
+  return groups.map((g, i) => {
+    const parts = [];
+    for (const v of g.v) { const p = parts[parts.length - 1]; if (p && v === p[1] + 1) p[1] = v; else parts.push([v, v]); }
+    const vs = parts.map(([a, z]) => a === z ? a : `${a}-${z}`).join(', ');
+    return (i && groups[i - 1].b === g.b ? '' : BOOKS[g.b][0] + ' ') + `${g.c}:${vs}`;
+  }).join(' ; ');
+}
 function copySel() {
   const ks = selOrdered(); if (!ks.length) return;
-  const r = ks.map(refOf), a = r[0], z = r[r.length - 1];
-  const ref = `${BOOKS[a.b][0]} ${a.c}:${a.v}` + (ks.length > 1 ? (a.c === z.c && a.b === z.b ? `-${z.v}` : ` – ${BOOKS[z.b][0]} ${z.c}:${z.v}`) : '');
-  const txt = `« ${r.map(x => x.txt).join(' ')} » (${ref}, Louis Segond)`;
+  const txt = `« ${ks.map(k => refOf(k).txt).join(' ')} » (${refLabel(ks)}, Louis Segond)`;
   const done = () => { copyBtn.textContent = 'Copié ✓'; setTimeout(() => { copyBtn.textContent = 'Copier'; }, 1500); };
   if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done, () => prompt('Copiez le texte :', txt));
   else prompt('Copiez le texte :', txt);
 }
-const selCount = h('span', { class: 'sel-count' });
-const selChips = h('div', { class: 'sel-chips' });
+const selRef = h('span', { class: 'sel-ref' });
+const selColors = h('div', { class: 'sel-colors' });
 const copyBtn = h('button', { class: 'sel-act', onclick: copySel }, 'Copier');
-const rmBtn = h('button', { class: 'sel-act', onclick: removeHl }, 'Effacer la couleur');
 const selBar = h('div', { class: 'selbar', hidden: true, role: 'toolbar', 'aria-label': 'Surligner les versets sélectionnés' },
-  h('div', { class: 'sel-top' }, selCount, h('button', { class: 'sel-x', 'aria-label': 'Annuler la sélection', onclick: clearSel }, '✕')),
-  selChips, h('div', { class: 'sel-acts' }, copyBtn, rmBtn));
+  h('div', { class: 'sel-top' }, h('button', { class: 'sel-link', onclick: clearSel }, 'Annuler'), selRef, copyBtn),
+  selColors);
 function updateSelBar() {
   const k = V.sel.size;
   selBar.hidden = !k; document.body.classList.toggle('selecting', !!k);
   if (!k) return;
-  selCount.textContent = `${k} verset${k > 1 ? 's' : ''} sélectionné${k > 1 ? 's' : ''} · choisissez une couleur`;
-  selChips.replaceChildren(...S.cats.map(c => h('button', { class: 'cat-chip', onclick: () => applyCat(c.id) },
-    h('span', { class: 'cat-dot', style: `background:${c.c}` }), c.n)));
-  rmBtn.hidden = ![...V.sel].some(x => isKept(V.selDay, x));
+  selRef.textContent = refLabel(selOrdered());
+  const kept = [...V.sel].some(x => isKept(V.selDay, x));
+  const one = k === 1 && kept ? catOf([...V.sel][0]).id : null; // couleur actuelle d'un verset seul
+  selColors.replaceChildren(
+    kept ? h('button', { class: 'color-btn', 'aria-label': 'Retirer la couleur', onclick: removeHl }, h('span', { class: 'color-dot none' }, '✕'), h('span', { class: 'color-name' }, 'Retirer')) : null,
+    ...S.cats.map(c => h('button', { class: 'color-btn' + (c.id === one ? ' on' : ''), 'aria-label': c.n || 'Surligner de cette couleur', onclick: () => applyCat(c.id) },
+      h('span', { class: 'color-dot', style: `background:${c.c}` }), h('span', { class: 'color-name' }, c.n))));
 }
 document.body.append(selBar);
 function toggleDone(n) {
@@ -459,7 +487,7 @@ function savedVerse(key) {
   const [b, c, v] = key.split('.').map(Number);
   const cat = catOf(key);
   return h('div', { class: 'verse-saved', 'data-cat': cat.id, style: `border-left-color:${cat.c}` },
-    h('div', { class: 'ref' }, `${BOOKS[b][0]} ${c}:${v}`, h('span', { class: 'cat-tag', style: `background:${fond(cat.c)}` }, cat.n)),
+    h('div', { class: 'ref' }, `${BOOKS[b][0]} ${c}:${v}`, cat.n ? h('span', { class: 'cat-tag', style: `background:${fond(cat.c)}` }, cat.n) : null),
     h('p', null, LSG[b][c - 1][v - 1]));
 }
 
@@ -514,7 +542,7 @@ function viewProgress() {
     keys.length ? versesByCat(keys) : h('p', { class: 'muted' }, 'Les versets que vous surlignez pendant la lecture apparaîtront ici, rangés par couleur.')));
   return out;
 }
-// Liste des versets surlignés, avec un filtre par catégorie
+// Liste des versets surlignés, avec un filtre par couleur
 function versesByCat(keys) {
   const list = h('div', null, keys.slice().reverse().map(savedVerse));
   const count = id => keys.filter(k => catOf(k).id === id).length;
@@ -527,7 +555,7 @@ function versesByCat(keys) {
   chips.push(all);
   for (const c of S.cats) {
     const k = count(c.id); if (!k) continue;
-    const b = h('button', { class: 'cat-chip', onclick: () => filter(c.id, b) }, h('span', { class: 'cat-dot', style: `background:${c.c}` }), `${c.n} · ${k}`);
+    const b = h('button', { class: 'cat-chip', onclick: () => filter(c.id, b) }, h('span', { class: 'cat-dot', style: `background:${c.c}` }), c.n ? `${c.n} · ${k}` : `${k}`);
     chips.push(b);
   }
   return [h('div', { class: 'sel-chips' }, chips), list];
@@ -571,34 +599,17 @@ function viewSettings() {
   ];
 }
 
-/* ---------- Catégories de surlignage ---------- */
+/* ---------- Couleurs de surlignage (noms libres) ---------- */
 function catsCard() {
   const used = id => Object.values(S.verses).flat().filter(k => catOf(k).id === id).length;
-  const rows = S.cats.map((c, i) => h('div', { class: 'cat-row' },
-    h('div', { class: 'cat-line' },
-      h('span', { class: 'cat-dot big', style: `background:${c.c}` }),
-      h('input', { type: 'text', value: c.n, maxlength: 30, 'aria-label': 'Nom de la catégorie',
-        onchange: e => { c.n = e.target.value.trim() || c.n; save(); render(); } }),
-      S.cats.length > 1 ? h('button', { class: 'sel-x', 'aria-label': `Supprimer « ${c.n} »`, onclick: () => {
-        const u = used(c.id);
-        const repli = S.cats.find(x => x.id !== c.id);
-        if (u && !confirm(`${u} verset${u > 1 ? 's' : ''} ${u > 1 ? 'sont' : 'est'} dans « ${c.n} ». Ils passeront dans « ${repli.n} ». Supprimer la catégorie ?`)) return;
-        // Les versets sans catégorie suivent la première : on fixe la leur avant que l'ordre ne change
-        for (const k of Object.values(S.verses).flat()) if (!S.cats.some(x => x.id === S.vc[k])) S.vc[k] = S.cats[0].id;
-        for (const k of Object.keys(S.vc)) if (S.vc[k] === c.id) S.vc[k] = repli.id;
-        S.cats.splice(i, 1);
-        save(); render();
-      } }, '✕') : null),
-    h('div', { class: 'swatches' }, COULEURS.map(col => h('button', {
-      class: 'swatch' + (col === c.c ? ' on' : ''), style: `background:${col}`, 'aria-label': 'Choisir cette couleur',
-      onclick: () => { c.c = col; save(); render(); } })))));
-  return h('div', { class: 'card' }, h('h2', null, 'Couleurs de surlignage'),
-    h('p', { class: 'muted small' }, 'Chaque couleur correspond à une catégorie de versets. Renommez-les, changez leur couleur ou ajoutez-en.'),
-    rows,
-    S.cats.length < 12 ? h('button', { class: 'btn alt', onclick: () => {
-      const libre = COULEURS.find(col => !S.cats.some(c => c.c === col)) || COULEURS[S.cats.length % COULEURS.length];
-      S.cats.push({ id: 'c' + Date.now().toString(36), n: 'Nouvelle catégorie', c: libre }); save(); render();
-    } }, '+ Ajouter une catégorie') : null);
+  const rows = S.cats.map(c => { const u = used(c.id); return h('div', { class: 'cat-line' },
+    h('span', { class: 'cat-dot big', style: `background:${c.c}` }),
+    h('input', { type: 'text', value: c.n, maxlength: 30, placeholder: 'Sans nom', 'aria-label': 'Nom de cette couleur',
+      onchange: e => { c.n = e.target.value.trim(); save(); } }),
+    h('span', { class: 'cat-count' }, u ? `${u} verset${u > 1 ? 's' : ''}` : '')); });
+  return h('div', { class: 'card' }, h('h2', null, 'Mes couleurs de surlignage'),
+    h('p', { class: 'muted small' }, 'Organisez vos versets comme vous le souhaitez : vous pouvez donner un nom à chaque couleur (par exemple « Combat », « Promesses », « Prière »…). C’est facultatif.'),
+    rows);
 }
 
 /* ---------- Installation sur l'écran d'accueil ---------- */
