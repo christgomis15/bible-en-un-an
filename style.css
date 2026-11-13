@@ -306,3 +306,19 @@ html[data-theme="veillee"] .mini-stats b{color:#f3dca0;font-weight:500;font-size
 html .card.hour-verse{background:var(--hero)}
 html[data-theme="veillee"] .card.hour-verse{background:var(--hero);border-color:rgba(217,183,112,.35)}
 html[data-theme="veillee"] body{font-variant-numeric:lining-nums}
+
+/* Décor de nuit (style Veillée) : étoiles + un motif par nuit, derrière le contenu */
+.sky{position:absolute;left:0;right:0;top:0;height:420px;pointer-events:none;z-index:0;overflow:hidden}
+.sky[hidden]{display:none}
+html:not([data-theme="veillee"]) .sky{display:none}
+.sky .stars{position:absolute;inset:0;width:100%;height:100%}
+.sky .motif{position:absolute;top:calc(4px + env(safe-area-inset-top));right:max(10px,calc(50% - 370px));width:96px;height:96px;opacity:.95}
+.sky .motif-etoile-christ{width:84px;height:110px}
+.sky .tw{animation:twinkle 4s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+.sky .filante{opacity:0;animation:filante 9s ease-in 3s infinite}
+@keyframes filante{0%{opacity:0;transform:translate(0,0)}3%{opacity:1}8%{opacity:0;transform:translate(60px,22px)}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.sky .tw,.sky .filante{animation:none}}
+body{position:relative}
+.top,main{position:relative;z-index:1}
+.tonight{margin:10px 0 0}

@@ -7,7 +7,7 @@
 <meta name="description" content="Lire et méditer toute la Bible en un an, du lundi au samedi (Louis Segond 1910).">
 <meta name="theme-color" content="#f2f5f1">
 <script>/* Style choisi (Jardin / Veillée / automatique), posé avant l’affichage */
-try{var s=JSON.parse(localStorage.getItem("bible-an-v1"))||{},t=s.theme||"auto";if(t==="auto")t=matchMedia("(prefers-color-scheme: dark)").matches?"veillee":"jardin";document.documentElement.setAttribute("data-theme",t);document.querySelector("meta[name=theme-color]").content=t==="veillee"?"#10163a":"#f2f5f1"}catch(e){}</script>
+try{var s=JSON.parse(localStorage.getItem("bible-an-v1"))||{},t=s.theme||"auto";if(t==="auto"){var hr=new Date().getHours();t=hr>=19||hr<7?"veillee":"jardin"}document.documentElement.setAttribute("data-theme",t);document.querySelector("meta[name=theme-color]").content=t==="veillee"?"#10163a":"#f2f5f1"}catch(e){}</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">

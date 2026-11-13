@@ -762,14 +762,58 @@ function viewSettings() {
 }
 
 /* ---------- Apparence : style Jardin, Veillée ou automatique ---------- */
-const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+// Automatique : Jardin le jour (7 h – 19 h), Veillée la nuit
+const NUIT_DEBUT = 19, NUIT_FIN = 7;
+const isNight = (d = new Date()) => d.getHours() >= NUIT_DEBUT || d.getHours() < NUIT_FIN;
+let sceneKey = '';
 function applyTheme() {
   const pref = S.theme || 'auto';
-  const t = pref === 'auto' ? (darkMQ.matches ? 'veillee' : 'jardin') : pref;
+  const t = pref === 'auto' ? (isNight() ? 'veillee' : 'jardin') : pref;
+  const changed = document.documentElement.getAttribute('data-theme') !== t;
   document.documentElement.setAttribute('data-theme', t);
   const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = t === 'veillee' ? '#10163a' : '#f2f5f1';
+  paintSky(t === 'veillee');
+  return changed;
 }
-darkMQ.addEventListener && darkMQ.addEventListener('change', () => { if ((S.theme || 'auto') === 'auto') applyTheme(); });
+// Vérifie chaque minute (et au retour dans l'appli) s'il faut passer du jour à la nuit
+setInterval(() => { if ((S.theme || 'auto') === 'auto') applyTheme(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) applyTheme(); });
+
+/* ---------- Décor de nuit : un seul motif par nuit, qui change chaque nuit ---------- */
+const MOON_DEFS = '<defs><radialGradient id="mg" cx="40%" cy="38%"><stop offset="0" stop-color="#fffbe9"/><stop offset=".7" stop-color="#f3e3b0"/><stop offset="1" stop-color="#d4bd80"/></radialGradient><radialGradient id="halo"><stop offset=".4" stop-color="#f3dca0" stop-opacity=".32"/><stop offset="1" stop-color="#f3dca0" stop-opacity="0"/></radialGradient></defs>';
+const CRATERS = '<g fill="#cdb67a" opacity=".45"><circle cx="42" cy="44" r="4"/><circle cx="58" cy="57" r="5"/><circle cx="56" cy="40" r="2.5"/><circle cx="43" cy="61" r="3"/></g>';
+const SCENES = [
+  { id: 'etoiles', nom: 'Ciel étoilé', svg: '' }, // seulement les étoiles, plus nombreuses, et une étoile filante
+  { id: 'pleine-lune', nom: 'Pleine lune', svg: MOON_DEFS + '<circle cx="50" cy="50" r="50" fill="url(#halo)"/><circle cx="50" cy="50" r="25" fill="url(#mg)"/>' + CRATERS },
+  { id: 'demi-lune', nom: 'Demi-lune', svg: MOON_DEFS + '<clipPath id="half"><rect x="0" y="0" width="50" height="100"/></clipPath><circle cx="50" cy="50" r="42" fill="url(#halo)" opacity=".7"/><circle cx="50" cy="50" r="25" fill="#ffffff" opacity=".07"/><g clip-path="url(#half)"><circle cx="50" cy="50" r="25" fill="url(#mg)"/>' + CRATERS + '</g>' },
+  { id: 'etoile-christ', nom: 'L’étoile de Christ', svg: '<defs><radialGradient id="sg"><stop offset="0" stop-color="#fff8dc" stop-opacity=".75"/><stop offset="1" stop-color="#f3dca0" stop-opacity="0"/></radialGradient><linearGradient id="sf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf2"/><stop offset="1" stop-color="#e7c77e"/></linearGradient></defs><circle cx="50" cy="36" r="30" fill="url(#sg)"/><g stroke="#f7e6b5" stroke-width=".8" opacity=".55"><path d="M50 36 L66 20M50 36 L34 20M50 36 L64 50M50 36 L36 50"/></g><path d="M50 8 L54 32 L74 36 L54 40 L50 96 L46 40 L26 36 L46 32 Z" fill="url(#sf)"/>' },
+  { id: 'lampe', nom: 'La lampe (Psaume 119:105)', svg: '<defs><radialGradient id="fl"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".7"/><stop offset="1" stop-color="#ffb84d" stop-opacity="0"/></radialGradient><linearGradient id="lb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9c983"/><stop offset="1" stop-color="#9c6f2c"/></linearGradient><linearGradient id="fg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff9a3c"/><stop offset=".6" stop-color="#ffd36e"/><stop offset="1" stop-color="#fff6d6"/></linearGradient></defs><circle cx="84" cy="38" r="16" fill="url(#fl)"/><path d="M22 66 Q10 66 12 57 Q15 51 22 58" fill="none" stroke="#c99a50" stroke-width="3" stroke-linecap="round"/><path d="M20 66 Q20 56 38 54 L66 54 Q80 54 86 48 Q85 60 75 64 Q64 72 40 72 Q24 72 20 66 Z" fill="url(#lb)"/><ellipse cx="44" cy="54" rx="8" ry="2.4" fill="#5d4120"/><ellipse cx="44" cy="76" rx="14" ry="3" fill="#8a6128"/><path d="M86 48 Q79 37 85 24 Q93 37 86 48 Z" fill="url(#fg)"/>' },
+  { id: 'colombe', nom: 'La colombe et le rameau (Genèse 8:11)', svg: '<defs><linearGradient id="dv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d9d4e8"/></linearGradient><radialGradient id="dg"><stop offset="0" stop-color="#f3dca0" stop-opacity=".28"/><stop offset="1" stop-color="#f3dca0" stop-opacity="0"/></radialGradient></defs><circle cx="52" cy="46" r="46" fill="url(#dg)"/><path d="M50 48 Q62 28 88 24 Q76 40 68 52 Z" fill="#c9c3dd"/><path d="M42 48 Q48 22 74 12 Q66 30 64 50 Z" fill="url(#dv)"/><path d="M20 50 Q28 43 44 45 Q57 46 65 53 Q75 61 90 57 Q82 66 66 66 Q50 68 38 62 Q28 58 20 50 Z" fill="url(#dv)"/><circle cx="24" cy="49" r="1.2" fill="#2a3470"/><path d="M19 49 L13 51 L19 52 Z" fill="#e0b25a"/><path d="M14 51 Q9 60 14 72" fill="none" stroke="#8fae6a" stroke-width="1.6" stroke-linecap="round"/><g fill="#a9c784"><ellipse cx="9" cy="58" rx="4.5" ry="1.8" transform="rotate(-35 9 58)"/><ellipse cx="17" cy="62" rx="4.5" ry="1.8" transform="rotate(30 17 62)"/><ellipse cx="9" cy="67" rx="4.5" ry="1.8" transform="rotate(-30 9 67)"/><ellipse cx="17" cy="71" rx="4" ry="1.6" transform="rotate(35 17 71)"/></g>' }];
+// Numéro de la nuit : une nuit va de midi à midi, pour garder le même décor toute la nuit
+function nightIndex(d = new Date()) {
+  const x = new Date(d); if (x.getHours() < 12) x.setDate(x.getDate() - 1);
+  return Math.floor(Date.UTC(x.getFullYear(), x.getMonth(), x.getDate()) / 864e5);
+}
+const sceneOfTonight = () => SCENES[(nightIndex() * 5) % SCENES.length];
+function rng(seed) { return () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }; }
+let sky = null;
+function paintSky(on) {
+  if (!on) { if (sky) sky.hidden = true; return; }
+  const sc = sceneOfTonight(), key = sc.id + nightIndex();
+  if (!sky) { sky = h('div', { class: 'sky', 'aria-hidden': 'true' }); document.body.prepend(sky); }
+  sky.hidden = false;
+  if (key === sceneKey) return;
+  sceneKey = key;
+  const r = rng(nightIndex() % 100000 + 7), dense = sc.id === 'etoiles';
+  let stars = '';
+  for (let i = 0, n = dense ? 90 : 45; i < n; i++) {
+    const x = (r() * 400).toFixed(1), y = (r() * 300).toFixed(1), s = (r() * (dense ? 1.3 : 1) + .35).toFixed(2), o = (r() * .55 + .3).toFixed(2);
+    stars += `<circle cx="${x}" cy="${y}" r="${s}" fill="#fff" opacity="${o}"${i % 7 === 0 ? ` class="tw" style="animation-delay:${(r() * 4).toFixed(1)}s"` : ''}/>`;
+  }
+  if (dense) stars = '<defs><linearGradient id="voie" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9fb0ff" stop-opacity="0"/><stop offset=".5" stop-color="#c9d2ff" stop-opacity=".13"/><stop offset="1" stop-color="#9fb0ff" stop-opacity="0"/></linearGradient><linearGradient id="filante" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".9"/></linearGradient></defs><path d="M-20 260 Q180 120 420 20 L420 70 Q190 170 -20 300 Z" fill="url(#voie)"/>' + stars + '<path class="filante" d="M250 40 L330 70" stroke="url(#filante)" stroke-width="1.6" stroke-linecap="round"/>';
+  sky.innerHTML = `<svg class="stars" viewBox="0 0 400 300" preserveAspectRatio="xMidYMin slice">${stars}</svg>` +
+    (sc.svg ? `<svg class="motif motif-${sc.id}" viewBox="0 0 100 100">${sc.svg}</svg>` : '');
+}
 function themeCard() {
   const opts = [
     ['auto', 'Automatique', 'sw-auto'],
@@ -777,11 +821,12 @@ function themeCard() {
     ['veillee', 'Veillée', 'sw-veillee']];
   const cur = S.theme || 'auto';
   return h('div', { class: 'card' }, h('h2', null, 'Apparence'),
-    h('p', { class: 'muted small' }, 'Jardin : clair et frais. Veillée : bleu nuit et doré, reposant le soir. Automatique : Jardin le jour, Veillée quand le téléphone est en mode sombre. Vous pouvez changer quand vous voulez.'),
+    h('p', { class: 'muted small' }, 'Automatique : Jardin le jour (de 7 h à 19 h) et Veillée la nuit. Jardin : clair et frais. Veillée : bleu nuit et doré, avec un décor de nuit qui change chaque nuit (ciel étoilé, pleine lune, demi-lune, étoile de Christ, lampe, colombe). Vous pouvez changer quand vous voulez.'),
     h('div', { class: 'themes', role: 'radiogroup', 'aria-label': 'Style de l’application' }, opts.map(([id, nom, sw]) =>
       h('button', { class: 'theme-opt' + (cur === id ? ' on' : ''), role: 'radio', 'aria-checked': cur === id ? 'true' : 'false',
         onclick: () => { S.theme = id; save(); applyTheme(); const y = scrollY; render(); scrollTo(0, y); } },
-        h('span', { class: 'sw ' + sw }, h('i'), h('i'), h('i')), nom))));
+        h('span', { class: 'sw ' + sw }, h('i'), h('i'), h('i')), nom))),
+    h('p', { class: 'muted small tonight' }, `Décor de cette nuit : ${sceneOfTonight().nom}`));
 }
 
 /* ---------- Couleurs de surlignage (noms libres) ---------- */
