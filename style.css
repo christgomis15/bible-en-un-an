@@ -160,3 +160,31 @@ body.selecting .fab{display:none}
 .cat-line{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
 .cat-count{font-size:.75rem;color:var(--muted);min-width:62px;text-align:right}
 .cat-line input{flex:1;min-width:0;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+
+/* Onglet Bible */
+.bible-search{display:flex;gap:8px}
+.bible-search input{flex:1;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.bible-search .btn{margin:0}
+.bible-top{padding:12px}
+.chap-pick{border:0;background:transparent;color:var(--ink);font:inherit;cursor:pointer;padding:2px 0;border-radius:10px}
+.chap-pick .caret{font-size:.9rem;color:var(--gold)}
+.chap-foot{display:flex;justify-content:space-between;gap:10px;margin:0 0 6px}
+.chap-foot .btn{flex:1;margin:0;text-align:center}
+.chap-foot .btn:disabled{opacity:.4;cursor:default}
+.picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.picker-head h2{margin:0}
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.book,.chap{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px 8px;font:inherit;font-size:.9rem;cursor:pointer;text-align:center}
+.book.on,.chap.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+.chap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px}
+.chap{padding:12px 0;font-variant-numeric:tabular-nums}
+.hit{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;padding:10px 2px;cursor:pointer}
+.hit .ref{font-size:.8rem;color:var(--gold);font-weight:700}
+.hit p{margin:2px 0 0;font-family:var(--serif);line-height:1.5}
+mark{background:var(--hl);color:var(--ink);border-radius:3px;padding:0 1px}
+.ref-link,.ctx-link{border:0;background:transparent;color:var(--gold);font:inherit;font-weight:700;padding:0;cursor:pointer}
+.ctx-link{display:block;margin-top:6px;font-size:.85rem;color:var(--brand)}
+@media (prefers-color-scheme:dark){.ctx-link{color:var(--gold)}}
+.reader .vs.flash{animation:flash 2.4s ease-out}
+@keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--gold)}100%{box-shadow:0 0 0 3px transparent}}
+@media (prefers-reduced-motion:reduce){.reader .vs.flash{animation:none;box-shadow:0 0 0 2px var(--gold)}}

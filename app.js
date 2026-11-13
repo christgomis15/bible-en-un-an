@@ -126,17 +126,25 @@ function migreCats(s) {
   neuf.forEach(x => delete x.pris);
   for (const k of Object.keys(s.vc)) if (map[s.vc[k]]) s.vc[k] = map[s.vc[k]];
   // les versets sans catégorie suivaient la première ancienne catégorie
-  for (const k of Object.values(s.verses).flat()) if (!s.vc[k]) s.vc[k] = map[s.cats[0].id];
+  for (const k of Object.values(s.verses || {}).flat()) if (!s.vc[k]) s.vc[k] = map[s.cats[0].id];
   s.cats = neuf;
 }
 let S = load();
-const V = { tab: 'today', day: null, ver: 'lsg', sel: new Set(), selDay: null };
+const V = { tab: 'today', day: null, ver: 'lsg', sel: new Set(), bv: 'read', bb: null, q: '', qMax: 100, goto: null };
 
 function norm(s) {
-  s = Object.assign({ start: null, done: {}, verses: {}, font: 19, remind: '06:30' }, s || {});
+  s = Object.assign({ start: null, done: {}, font: 19, remind: '06:30' }, s || {});
   if (!Array.isArray(s.cats) || !s.cats.length) s.cats = CATS_DEFAUT();
   if (!s.vc || typeof s.vc !== 'object') s.vc = {}; // verset → couleur
   migreCats(s);
+  // Surlignages : autrefois rangés par jour de lecture (verses + vc), désormais communs à toute l'appli (hl)
+  if (!s.hl || typeof s.hl !== 'object') {
+    s.hl = {};
+    for (const n of Object.keys(s.verses || {}).map(Number).sort((a, b) => a - b))
+      for (const k of s.verses[n]) s.hl[k] = s.vc[k] || s.cats[0].id;
+  }
+  delete s.verses; delete s.vc;
+  if (!s.pos) s.pos = { b: 42, c: 1 }; // dernier chapitre ouvert dans l'onglet Bible (Jean 1)
   return s;
 }
 function load() {
@@ -144,7 +152,7 @@ function load() {
   return norm();
 }
 // Catégorie d'un verset surligné (les anciens surlignages vont dans la première catégorie)
-const catOf = key => S.cats.find(c => c.id === S.vc[key]) || S.cats[0];
+const catOf = key => S.cats.find(c => c.id === S.hl[key]) || S.cats[0];
 const fond = c => c + '59'; // couleur à ~35 % d'opacité
 function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} }
 
@@ -194,10 +202,11 @@ function render() {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === V.tab));
   view.replaceChildren();
   clearSel();
-  if (!S.start) { view.append(welcome()); return; }
-  const fn = { today: viewToday, plan: viewPlan, progress: viewProgress, settings: viewSettings }[V.tab];
+  if (!S.start && V.tab !== 'bible') { view.append(welcome()); return; }
+  const fn = { today: viewToday, bible: viewBible, plan: viewPlan, progress: viewProgress, settings: viewSettings }[V.tab];
   view.append(...[].concat(fn()).filter(Boolean));
   window.scrollTo(0, 0);
+  if (V.goto) { const sp = verseEl(V.goto); V.goto = null; if (sp) { sp.scrollIntoView({ block: 'center' }); sp.classList.add('flash'); } }
 }
 
 function welcome() {
@@ -232,7 +241,7 @@ function hourCard() {
   const card = h('div', { class: 'card hour-verse' },
     h('div', { class: 'kicker' }, `Parole de l’heure · ${pad(new Date().getHours())} h`),
     h('blockquote', null, v.t),
-    h('div', { class: 'ref' }, v.r),
+    h('div', { class: 'ref' }, v.r, contextBtn(v.r)),
     h('p', { class: 'muted small' }, '« C’est de l’abondance du cœur que la bouche parle » (Luc 6:45). Remplissons notre cœur de la Parole de Dieu.'));
   return card;
 }
@@ -264,7 +273,7 @@ function fillBubble() {
   bubble.firstChild.replaceChildren(
     h('div', { class: 'kicker', id: 'bubble-k' }, `Parole de l’heure · ${pad(n.getHours())} h`),
     h('blockquote', null, v.t),
-    h('div', { class: 'ref' }, v.r),
+    h('div', { class: 'ref' }, v.r, contextBtn(v.r, () => { bubble.hidden = true; })),
     h('p', { class: 'muted small' }, `Gardez cette parole dans votre cœur : un nouveau verset vous attend à ${pad(next)} h.`),
     h('button', { class: 'btn', onclick: closeBubble }, 'Amen'));
 }
@@ -350,23 +359,22 @@ function readerLSG(n) {
       h('button', { 'aria-label': 'Réduire la taille du texte', onclick: () => { S.font = Math.max(15, S.font - 1); save(); render(); } }, 'A−'),
       h('button', { 'aria-label': 'Agrandir la taille du texte', onclick: () => { S.font = Math.min(30, S.font + 1); save(); render(); } }, 'A+')));
   const reader = h('div', { class: 'reader' });
-  const kept = new Set(S.verses[n] || []);
-  for (const [b, c1, c2] of PLAN[n - 1].s) {
-    for (let c = c1; c <= c2; c++) {
-      reader.append(h('h3', null, `${BOOKS[b][0]} ${c}`));
-      const p = h('p', { class: BLOCK_BOOKS.has(b) ? 'blocks' : '' });
-      LSG[b][c - 1].forEach((txt, i) => {
-        const key = `${b}.${c}.${i + 1}`;
-        const sp = h('span', { class: 'vs', 'data-k': key, onclick: () => toggleSel(n, key) },
-          h('sup', null, i + 1), txt + ' ');
-        paintVerse(sp, kept.has(key));
-        p.append(sp);
-      });
-      reader.append(p);
-    }
-  }
+  for (const [b, c1, c2] of PLAN[n - 1].s)
+    for (let c = c1; c <= c2; c++) reader.append(h('h3', null, `${BOOKS[b][0]} ${c}`), chapterEl(b, c));
   wrap.append(reader, h('p', { class: 'hint' }, 'Touchez un ou plusieurs versets, puis choisissez une couleur.'));
   return wrap;
+}
+
+// Texte d'un chapitre, versets touchables pour les surligner
+function chapterEl(b, c) {
+  const p = h('p', { class: BLOCK_BOOKS.has(b) ? 'blocks' : '' });
+  LSG[b][c - 1].forEach((txt, i) => {
+    const key = `${b}.${c}.${i + 1}`;
+    const sp = h('span', { class: 'vs', 'data-k': key, onclick: () => toggleSel(key) }, h('sup', null, i + 1), txt + ' ');
+    paintVerse(sp, !!S.hl[key]);
+    p.append(sp);
+  });
+  return p;
 }
 
 function readerSemeur(n) {
@@ -382,7 +390,7 @@ function readerSemeur(n) {
 }
 
 /* ---------- Sélection et surlignage en couleurs ---------- */
-const isKept = (n, key) => (S.verses[n] || []).includes(key);
+const isKept = key => !!S.hl[key];
 const verseEl = key => view.querySelector(`.vs[data-k="${key}"]`);
 function paintVerse(sp, on) {
   const key = sp.dataset.k, c = on ? catOf(key) : null;
@@ -390,32 +398,28 @@ function paintVerse(sp, on) {
   sp.style.backgroundColor = c ? fond(c.c) : '';
   sp.classList.toggle('sel', V.sel.has(key));
 }
-function toggleSel(n, key) {
-  if (V.selDay !== n) { clearSel(); V.selDay = n; }
+function toggleSel(key) {
   if (V.sel.has(key)) V.sel.delete(key); else V.sel.add(key);
   const sp = verseEl(key); if (sp) sp.classList.toggle('sel', V.sel.has(key));
   updateSelBar();
 }
 function clearSel() {
   V.sel.forEach(k => { const sp = verseEl(k); if (sp) sp.classList.remove('sel'); });
-  V.sel.clear(); V.selDay = null; updateSelBar();
+  V.sel.clear(); updateSelBar();
 }
 // Clés sélectionnées, dans l'ordre du texte
 const selOrdered = () => [...view.querySelectorAll('.vs.sel')].map(sp => sp.dataset.k);
 function applyCat(catId) {
-  const n = V.selDay, arr = S.verses[n] || (S.verses[n] = []);
-  for (const k of selOrdered()) { if (!arr.includes(k)) arr.push(k); S.vc[k] = catId; }
+  for (const k of selOrdered()) { delete S.hl[k]; S.hl[k] = catId; } // réinséré : le plus récent en dernier
   save(); finishSel();
 }
 function removeHl() {
-  const n = V.selDay, arr = S.verses[n] || [];
-  for (const k of V.sel) { const i = arr.indexOf(k); if (i >= 0) arr.splice(i, 1); delete S.vc[k]; }
-  if (!arr.length) delete S.verses[n];
+  for (const k of V.sel) delete S.hl[k];
   save(); finishSel();
 }
 function finishSel() {
-  const keys = [...V.sel], n = V.selDay; V.sel.clear(); V.selDay = null;
-  keys.forEach(k => { const sp = verseEl(k); if (sp) paintVerse(sp, isKept(n, k)); });
+  const keys = [...V.sel]; V.sel.clear();
+  keys.forEach(k => { const sp = verseEl(k); if (sp) paintVerse(sp, isKept(k)); });
   updateSelBar();
 }
 function refOf(key) { const [b, c, v] = key.split('.').map(Number); return { b, c, v, txt: LSG[b][c - 1][v - 1] }; }
@@ -451,7 +455,7 @@ function updateSelBar() {
   selBar.hidden = !k; document.body.classList.toggle('selecting', !!k);
   if (!k) return;
   selRef.textContent = refLabel(selOrdered());
-  const kept = [...V.sel].some(x => isKept(V.selDay, x));
+  const kept = [...V.sel].some(isKept);
   const one = k === 1 && kept ? catOf([...V.sel][0]).id : null; // couleur actuelle d'un verset seul
   selColors.replaceChildren(
     kept ? h('button', { class: 'color-btn', 'aria-label': 'Retirer la couleur', onclick: removeHl }, h('span', { class: 'color-dot none' }, '✕'), h('span', { class: 'color-name' }, 'Retirer')) : null,
@@ -471,7 +475,8 @@ function sunday(last) {
       h('span', { class: 'dot' }, S.done[n] ? '✓' : ''), h('span', { class: 'd' }, fmtShort(dateOfDay(n))), h('span', { class: 'p' }, label(n))));
   }
   const weekVerses = [];
-  for (let n = first; n <= last; n++) (S.verses[n] || []).forEach(k => weekVerses.push(savedVerse(k)));
+  const inWeek = k => { const [kb, kc] = k.split('.').map(Number); for (let n = first; n <= last; n++) if (PLAN[n - 1].s.some(([b, c1, c2]) => b === kb && kc >= c1 && kc <= c2)) return true; return false; };
+  Object.keys(S.hl).filter(inWeek).sort(byRef).forEach(k => weekVerses.push(savedVerse(k)));
   return [
     h('div', { class: 'card' }, h('div', { class: 'kicker' }, 'Dimanche'), h('h2', null, 'Jour de repos et de récapitulation'),
       h('p', null, 'Pas de lecture au programme. Prenez le temps de souffler, de prier et de revenir sur la semaine.'),
@@ -487,8 +492,123 @@ function savedVerse(key) {
   const [b, c, v] = key.split('.').map(Number);
   const cat = catOf(key);
   return h('div', { class: 'verse-saved', 'data-cat': cat.id, style: `border-left-color:${cat.c}` },
-    h('div', { class: 'ref' }, `${BOOKS[b][0]} ${c}:${v}`, cat.n ? h('span', { class: 'cat-tag', style: `background:${fond(cat.c)}` }, cat.n) : null),
+    h('div', { class: 'ref' }, h('button', { class: 'ref-link', onclick: () => openBible(b, c, v) }, `${BOOKS[b][0]} ${c}:${v} ›`), cat.n ? h('span', { class: 'cat-tag', style: `background:${fond(cat.c)}` }, cat.n) : null),
     h('p', null, LSG[b][c - 1][v - 1]));
+}
+
+/* ---------- Bible : consulter librement toute la Parole ---------- */
+const byRef = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; };
+// Comparaison sans accents ni majuscules ; chaque caractère reste un caractère (pour retrouver la position dans le texte)
+const fold = t => { let o = ''; for (const ch of t.toLowerCase()) { const f = ch.normalize('NFD').replace(/[̀-ͯ]/g, ''); o += f.length === 1 ? f : ch; } return o.replace(/[’']/g, "'"); };
+let FOLDED_BOOKS = null;
+// « Jean 3:16 », « jn 3 », « 1 co 13.4 », « psaume 23 » → { b, c, v }
+function parseRef(q) {
+  const m = fold(q.trim()).match(/^(\d?\s*[a-z'][a-z' ]*?)\.?\s*(\d+)(?:\s*[:.,]\s*(\d+))?(?:\s*-\s*\d+)?$/);
+  if (!m) return null;
+  if (!FOLDED_BOOKS) FOLDED_BOOKS = BOOKS.map(x => fold(x[0]).replace(/\s+/g, ''));
+  const ABR = { jn: 'jean', mt: 'matthieu', mc: 'marc', lc: 'luc', ac: 'actes', rm: 'romains', es: 'esaie', is: 'esaie', jc: 'jacques', ps: 'psaumes', pr: 'proverbes', ex: 'exode', dt: 'deuteronome' };
+  let name = m[1].replace(/\s+/g, '');
+  const ab = name.match(/^(\d?)(.*)$/); if (ABR[ab[2]]) name = ab[1] + ABR[ab[2]];
+  const names = FOLDED_BOOKS;
+  let b = names.indexOf(name);
+  if (b < 0) b = names.findIndex(n => n.startsWith(name));
+  if (b < 0 && name.endsWith('s')) b = names.indexOf(name.slice(0, -1)); // « psaume » / « psaumes »
+  if (b < 0 && !name.endsWith('s')) b = names.indexOf(name + 's');
+  if (b < 0) return null;
+  if (LSG[b].length === 1 && !m[3]) return { b, c: 1, v: Math.min(Math.max(+m[2], 1), LSG[b][0].length) }; // « Jude 3 » = verset 3
+  const c = Math.min(Math.max(+m[2], 1), LSG[b].length);
+  const v = m[3] ? Math.min(Math.max(+m[3], 1), LSG[b][c - 1].length) : null;
+  return { b, c, v };
+}
+function openBible(b, c, v) {
+  S.pos = { b, c }; save();
+  V.tab = 'bible'; V.bv = 'read'; V.goto = v ? `${b}.${c}.${v}` : null; render();
+}
+function contextBtn(r, before) {
+  return h('button', { class: 'ctx-link', onclick: () => { const p = parseRef(r); if (!p) return; if (before) before(); openBible(p.b, p.c, p.v); } }, 'Lire dans son contexte ›');
+}
+function stepChapter(d) {
+  let { b, c } = S.pos; c += d;
+  if (c < 1) { if (b === 0) return; b--; c = LSG[b].length; }
+  else if (c > LSG[b].length) { if (b === BOOKS.length - 1) return; b++; c = 1; }
+  openBible(b, c);
+}
+function viewBible() {
+  const qIn = h('input', { type: 'search', id: 'bible-q', value: V.q, placeholder: 'Un mot ou une référence (Jean 3:16)', 'aria-label': 'Rechercher dans la Bible', enterkeyhint: 'search' });
+  const form = h('form', { class: 'bible-search', role: 'search', onsubmit: e => {
+    e.preventDefault(); const q = qIn.value.trim(); if (!q) return;
+    const r = parseRef(q);
+    if (r) { V.q = ''; openBible(r.b, r.c, r.v); return; }
+    V.q = q; V.qMax = 100; V.bv = 'search'; render();
+  } }, qIn, h('button', { class: 'btn', type: 'submit' }, 'Chercher'));
+  const out = [h('div', { class: 'card bible-top' }, form)];
+  if (V.bv === 'books') out.push(...bookPicker());
+  else if (V.bv === 'chapters') out.push(chapterPicker(V.bb));
+  else if (V.bv === 'search') out.push(searchResults(V.q));
+  else out.push(...chapterView());
+  return out;
+}
+function setFont(d) { S.font = Math.min(30, Math.max(15, S.font + d)); save(); document.documentElement.style.setProperty('--read-size', S.font + 'px'); }
+function chapterView() {
+  const { b, c } = S.pos, first = b === 0 && c === 1, last = b === BOOKS.length - 1 && c === LSG[b].length;
+  const head = h('div', { class: 'day-head' },
+    h('button', { class: 'nav', 'aria-label': 'Chapitre précédent', disabled: first, onclick: () => stepChapter(-1) }, '‹'),
+    h('button', { class: 'mid chap-pick', 'aria-label': 'Choisir un livre et un chapitre', onclick: () => { V.bv = 'books'; render(); } },
+      h('div', { class: 'passage' }, `${BOOKS[b][0]} ${c}`, h('span', { class: 'caret' }, ' ▾')),
+      h('div', { class: 'meta' }, `${b < 39 ? 'Ancien' : 'Nouveau'} Testament · chapitre ${c} sur ${LSG[b].length}`)),
+    h('button', { class: 'nav', 'aria-label': 'Chapitre suivant', disabled: last, onclick: () => stepChapter(1) }, '›'));
+  const card = h('div', { class: 'card' },
+    h('div', { class: 'tools' },
+      h('button', { 'aria-label': 'Réduire la taille du texte', onclick: () => setFont(-1) }, 'A−'),
+      h('button', { 'aria-label': 'Agrandir la taille du texte', onclick: () => setFont(1) }, 'A+')),
+    h('div', { class: 'reader' }, chapterEl(b, c)),
+    h('p', { class: 'hint' }, 'Touchez un ou plusieurs versets pour les surligner ou les copier.'));
+  const foot = h('div', { class: 'chap-foot' },
+    h('button', { class: 'btn alt', disabled: first, onclick: () => stepChapter(-1) }, '‹ Précédent'),
+    h('button', { class: 'btn alt', disabled: last, onclick: () => stepChapter(1) }, 'Suivant ›'));
+  const bds = h('p', { class: 'center small' }, h('a', { href: `https://www.bible.com/bible/21/${BOOKS[b][2]}.${c}.BDS`, target: '_blank', rel: 'noopener' }, `Lire ${BOOKS[b][0]} ${c} dans la Bible du Semeur ↗`));
+  return [head, card, foot, bds];
+}
+function bookPicker() {
+  const grid = (from, to) => h('div', { class: 'book-grid' }, BOOKS.slice(from, to).map((x, i) => h('button', {
+    class: 'book' + (from + i === S.pos.b ? ' on' : ''), onclick: () => {
+      const b = from + i;
+      if (LSG[b].length === 1) openBible(b, 1); else { V.bb = b; V.bv = 'chapters'; render(); }
+    } }, x[0])));
+  return [
+    h('div', { class: 'card' }, h('div', { class: 'picker-head' }, h('h2', null, 'Ancien Testament'), h('button', { class: 'sel-link', onclick: () => { V.bv = 'read'; render(); } }, 'Fermer')), grid(0, 39)),
+    h('div', { class: 'card' }, h('h2', null, 'Nouveau Testament'), grid(39, 66))];
+}
+function chapterPicker(b) {
+  return h('div', { class: 'card' },
+    h('div', { class: 'picker-head' }, h('button', { class: 'sel-link', onclick: () => { V.bv = 'books'; render(); } }, '‹ Livres'), h('h2', null, BOOKS[b][0]), h('span')),
+    h('div', { class: 'chap-grid' }, LSG[b].map((_, i) => h('button', { class: 'chap' + (b === S.pos.b && i + 1 === S.pos.c ? ' on' : ''), onclick: () => openBible(b, i + 1) }, i + 1))));
+}
+let FOLDED = null; // texte de toute la Bible sans accents, préparé à la première recherche
+function searchResults(q) {
+  const fq = fold(q).replace(/\s+/g, ' ');
+  if (!FOLDED) FOLDED = LSG.map(book => book.map(ch => ch.map(fold)));
+  const hits = []; let total = 0, nt = 0;
+  FOLDED.forEach((book, b) => book.forEach((ch, c) => ch.forEach((t, v) => {
+    const i = t.indexOf(fq); if (i < 0) return;
+    total++; if (b >= 39) nt++;
+    if (hits.length < V.qMax) hits.push({ b, c: c + 1, v: v + 1, i });
+  })));
+  const back = h('button', { class: 'sel-link', onclick: () => { V.bv = 'read'; V.q = ''; render(); } }, '‹ Retour à la lecture');
+  if (!total) return h('div', { class: 'card' }, back, h('h2', null, `Aucun verset ne contient « ${q} »`),
+    h('p', { class: 'muted small' }, 'Essayez un mot plus court ou une autre forme du mot (« aimer », « aime », « amour »), ou une référence comme « Psaumes 23 ».'));
+  const list = hits.map(x => {
+    const txt = LSG[x.b][x.c - 1][x.v - 1];
+    return h('button', { class: 'hit', onclick: () => { V.q = q; openBible(x.b, x.c, x.v); } },
+      h('div', { class: 'ref' }, `${BOOKS[x.b][0]} ${x.c}:${x.v}`),
+      h('p', null, txt.slice(0, x.i), h('mark', null, txt.slice(x.i, x.i + fq.length)), txt.slice(x.i + fq.length)));
+  });
+  const fr = n => n.toLocaleString('fr-FR');
+  return h('div', { class: 'card' }, back,
+    h('h2', null, `${fr(total)} verset${total > 1 ? 's' : ''} avec « ${q} »`),
+    h('p', { class: 'muted small' }, `${fr(total - nt)} dans l’Ancien Testament, ${fr(nt)} dans le Nouveau. Touchez un verset pour l’ouvrir dans son chapitre.`),
+    list,
+    total > hits.length ? h('button', { class: 'btn alt block', onclick: () => { V.qMax += 100; const y = scrollY; render(); scrollTo(0, y); } }, `Afficher plus (${fr(hits.length)} sur ${fr(total)})`) : null);
 }
 
 /* ---------- Plan ---------- */
@@ -537,7 +657,7 @@ function viewProgress() {
       h('button', { class: 'btn', onclick: shiftPlan }, 'Reprendre à mon rythme'),
       h('button', { class: 'btn alt', onclick: () => { V.day = firstUndone(); V.tab = 'today'; render(); } }, 'Ouvrir le premier jour non lu')));
   }
-  const keys = []; for (const n of Object.keys(S.verses).map(Number).sort((a, b) => a - b)) S.verses[n].forEach(k => keys.push(k));
+  const keys = Object.keys(S.hl);
   out.push(h('div', { class: 'card' }, h('h2', null, `Versets surlignés (${keys.length})`),
     keys.length ? versesByCat(keys) : h('p', { class: 'muted' }, 'Les versets que vous surlignez pendant la lecture apparaîtront ici, rangés par couleur.')));
   return out;
@@ -601,7 +721,7 @@ function viewSettings() {
 
 /* ---------- Couleurs de surlignage (noms libres) ---------- */
 function catsCard() {
-  const used = id => Object.values(S.verses).flat().filter(k => catOf(k).id === id).length;
+  const used = id => Object.keys(S.hl).filter(k => catOf(k).id === id).length;
   const rows = S.cats.map(c => { const u = used(c.id); return h('div', { class: 'cat-line' },
     h('span', { class: 'cat-dot big', style: `background:${c.c}` }),
     h('input', { type: 'text', value: c.n, maxlength: 30, placeholder: 'Sans nom', 'aria-label': 'Nom de cette couleur',
@@ -717,7 +837,7 @@ function importData(e) {
 }
 
 /* ---------- Démarrage ---------- */
-document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => { V.tab = b.dataset.tab; if (V.tab === 'today') V.day = null; render(); }));
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => { V.tab = b.dataset.tab; if (V.tab === 'today') V.day = null; if (V.tab === 'bible') V.bv = 'read'; render(); }));
 
 if (window.BIBLE_LSG && window.BIBLE_PLAN) {
   LSG = window.BIBLE_LSG; PLAN = window.BIBLE_PLAN; TOTAL_CHARS = PLAN.reduce((a, d) => a + d.n, 0); render();
