@@ -293,9 +293,50 @@ function viewToday() {
   const out = [].concat(viewTodayInner());
   const cur = S.start && stateOn(today());
   const onToday = !cur || cur.k !== 'day' || V.day === cur.n;
-  if (onToday) { out.unshift(hourCard()); scheduleHourRefresh(); }
+  if (onToday) {
+    const top = [helloBlock(), hourCard()];
+    if (cur && cur.k === 'day') top.push(todayHero(cur.n), miniStats());
+    out.unshift(...top); scheduleHourRefresh();
+  }
   return out;
 }
+// Accueil : salutation, date et progression de l'année
+const pctRead = () => { let c = 0; for (const n of Object.keys(S.done)) c += PLAN[n - 1].n; return Math.round(c / TOTAL_CHARS * 1000) / 10; };
+function streakCount() {
+  const cur = currentDayNumber(); let streak = 0, n = cur;
+  if (n > 0 && !S.done[n]) n--;
+  while (n > 0 && S.done[n]) { streak++; n--; }
+  return streak;
+}
+function helloBlock() {
+  const hr = new Date().getHours(), st = stateOn(today());
+  const salut = hr < 5 ? 'Bonne nuit' : hr < 18 ? 'Bonjour' : 'Bonsoir';
+  const moment = hr >= 18 || hr < 5 ? 'votre soirée' : 'votre journée';
+  const pct = pctRead(), R = 23, C = 2 * Math.PI * R;
+  const ring = h('div', { class: 'hello-ring' });
+  ring.innerHTML = `<svg viewBox="0 0 58 58" role="img" aria-label="${pct} % de la Bible lue"><circle cx="29" cy="29" r="${R}" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="29" cy="29" r="${R}" fill="none" stroke="var(--brand)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(C * Math.min(100, pct) / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 29 29)"/><text x="29" y="33" text-anchor="middle" font-size="12" font-weight="800" fill="var(--ink)" style="font-family:var(--sans)">${Math.round(pct)}%</text></svg>`;
+  const day = st.k === 'day' ? `Jour ${st.n} / ${PLAN.length}` : st.k === 'rest' ? 'Dimanche, jour de repos' : '';
+  return h('div', { class: 'hello' },
+    h('div', { class: 'hello-row' },
+      h('div', null, h('small', null, cap(fmtLong(today()))), h('h2', null, `${salut}, que Dieu bénisse ${moment}`)),
+      ring),
+    h('div', { class: 'hello-bar' }, h('span', null, day), h('div', { class: 'bar' }, h('i', { style: `width:${Math.max(2, pct)}%` })), h('span', null, `${pct.toLocaleString('fr-FR')} %`)));
+}
+function todayHero(n) {
+  const done = !!S.done[n], wd = (dateOfDay(n).getDay() + 6) % 7;
+  const go = () => { const el = view.querySelector('.day-head'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  return h('div', { class: 'card today-hero' },
+    h('div', { class: 'art' }, svgIcon('<path d="M12 6c-2-1.5-5-2-8-1.5v14c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5v-14c-3-.5-6 0-8 1.5z"/><path d="M12 6v14"/>')),
+    h('div', null, h('small', null, `Lecture du jour · ≈ ${minutes(n)} min`), h('h2', null, label(n)), h('p', null, `Thème : ${THEMES[wd].t}`)),
+    h('button', { class: 'cta' + (done ? ' done' : ''), onclick: go }, done ? 'Lecture terminée ✓ · relire' : 'Commencer la lecture ›'));
+}
+function miniStats() {
+  const s = streakCount(), k = Object.keys(S.hl).length;
+  return h('div', { class: 'mini-stats' },
+    h('div', null, h('b', null, `${s} jour${s > 1 ? 's' : ''}`), h('span', null, 'de lecture d’affilée')),
+    h('div', null, h('b', null, k), h('span', null, `verset${k > 1 ? 's' : ''} surligné${k > 1 ? 's' : ''}`)));
+}
+function svgIcon(d) { const s = h('span'); s.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`; return s.firstChild; }
 function viewTodayInner() {
   const t = today(), st = stateOn(t);
   if (st.k === 'before') {
@@ -696,6 +737,7 @@ function viewSettings() {
   const fileIn = h('input', { type: 'file', accept: 'application/json', style: 'display:none', onchange: importData });
   return [
     ...installCard(),
+    themeCard(),
     ...pushCard(),
     catsCard(),
     h('div', { class: 'card' }, h('h2', null, 'Rappel quotidien'),
@@ -717,6 +759,29 @@ function viewSettings() {
       h('p', null, 'Texte biblique : Louis Segond (1910), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
       h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez « Un verset chaque heure », seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et votre plage d’heures sont conservés, et ils sont effacés dès que vous désactivez.'))
   ];
+}
+
+/* ---------- Apparence : style Jardin, Veillée ou automatique ---------- */
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+function applyTheme() {
+  const pref = S.theme || 'auto';
+  const t = pref === 'auto' ? (darkMQ.matches ? 'veillee' : 'jardin') : pref;
+  document.documentElement.setAttribute('data-theme', t);
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = t === 'veillee' ? '#10163a' : '#f2f5f1';
+}
+darkMQ.addEventListener && darkMQ.addEventListener('change', () => { if ((S.theme || 'auto') === 'auto') applyTheme(); });
+function themeCard() {
+  const opts = [
+    ['auto', 'Automatique', 'sw-auto'],
+    ['jardin', 'Jardin', 'sw-jardin'],
+    ['veillee', 'Veillée', 'sw-veillee']];
+  const cur = S.theme || 'auto';
+  return h('div', { class: 'card' }, h('h2', null, 'Apparence'),
+    h('p', { class: 'muted small' }, 'Jardin : clair et frais. Veillée : bleu nuit et doré, reposant le soir. Automatique : Jardin le jour, Veillée quand le téléphone est en mode sombre. Vous pouvez changer quand vous voulez.'),
+    h('div', { class: 'themes', role: 'radiogroup', 'aria-label': 'Style de l’application' }, opts.map(([id, nom, sw]) =>
+      h('button', { class: 'theme-opt' + (cur === id ? ' on' : ''), role: 'radio', 'aria-checked': cur === id ? 'true' : 'false',
+        onclick: () => { S.theme = id; save(); applyTheme(); const y = scrollY; render(); scrollTo(0, y); } },
+        h('span', { class: 'sw ' + sw }, h('i'), h('i'), h('i')), nom))));
 }
 
 /* ---------- Couleurs de surlignage (noms libres) ---------- */
@@ -837,6 +902,7 @@ function importData(e) {
 }
 
 /* ---------- Démarrage ---------- */
+applyTheme();
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => { V.tab = b.dataset.tab; if (V.tab === 'today') V.day = null; if (V.tab === 'bible') V.bv = 'read'; render(); }));
 
 if (window.BIBLE_LSG && window.BIBLE_PLAN) {

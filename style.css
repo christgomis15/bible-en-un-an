@@ -1,21 +1,48 @@
-:root{
-  --bg:#f6f1e7; --card:#fffdf8; --ink:#1f2433; --muted:#6b6f7e; --line:#e4dccb;
-  --brand:#2b3a67; --brand-ink:#ffffff; --gold:#b8862b; --gold-soft:#f3e4bf;
-  --ok:#2e7d4f; --warn:#b4532a; --hl:#ffe9a8;
-  --read-size:19px;
-  --serif:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,"Times New Roman",serif;
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+/* Polices intégrées à l'appli (fonctionnent hors connexion) */
+@font-face{font-family:"Plus Jakarta Sans";src:url(fonts/jakarta.woff2) format("woff2");font-weight:400 800;font-display:swap}
+@font-face{font-family:"Inter";src:url(fonts/inter.woff2) format("woff2");font-weight:400 600;font-display:swap}
+@font-face{font-family:"Cormorant Garamond";src:url(fonts/cormorant.woff2) format("woff2");font-weight:500 700;font-display:swap}
+@font-face{font-family:"Cormorant Garamond";src:url(fonts/cormorant-italic.woff2) format("woff2");font-weight:500 700;font-style:italic;font-display:swap}
+
+/* Deux styles au choix (Réglages → Apparence) : « Jardin » (clair) et « Veillée » (sombre).
+   Le style est posé sur <html data-theme="…"> ; Jardin sert aussi de valeur par défaut. */
+:root,html[data-theme="jardin"]{
+  --bg:#f2f5f1; --card:#ffffff; --ink:#17241d; --muted:#5c6d63; --line:#e1e8e3;
+  --brand:#2f6b4f; --brand-ink:#ffffff; --gold:#2f6b4f; --gold-soft:#dcefe2;
+  --ok:#2f8a5b; --warn:#d0643f; --hl:#fde8a6; --coral:#f6a68a; --coral-soft:#ffe4d6;
+  --hero:#2f6b4f; --hero-ink:#f3f8f2; --hero-sub:#c9ecd3;
+  --cta:#17241d; --cta-ink:#ffffff;
+  --shadow:0 6px 22px rgba(23,36,29,.07);
+  --radius:22px;
+  --read-size:19px; --read-scale:1; --read-weight:400;
+  --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --serif:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --display:"Plus Jakarta Sans",system-ui,sans-serif; --display-weight:800;
+  --read-font:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,"Times New Roman",serif;
+  --body-bg:var(--bg);
+  color-scheme:light;
 }
-@media (prefers-color-scheme:dark){
-  :root{--bg:#14171f; --card:#1b1f2a; --ink:#ebe8df; --muted:#9a9eae; --line:#2b3040;
-    --brand:#8da2e0; --brand-ink:#10131c; --gold:#e0b25a; --gold-soft:#3a3120; --ok:#6cc58e; --warn:#e8946a; --hl:#5a4a1c;}
+html[data-theme="veillee"]{
+  --bg:#10163a; --card:#19204a; --ink:#f1e9d8; --muted:#a8a5c0; --line:#2b3466;
+  --brand:#d9b770; --brand-ink:#141a3a; --gold:#d9b770; --gold-soft:#34325a;
+  --ok:#7fc8a0; --warn:#e8946a; --hl:#6b5a2a; --coral:#d9b770; --coral-soft:#34325a;
+  --hero:linear-gradient(180deg,rgba(217,183,112,.18),rgba(217,183,112,.05)); --hero-ink:#fbf4e4; --hero-sub:#d9b770;
+  --cta:linear-gradient(90deg,#d9b770,#f0d699); --cta-ink:#141a3a;
+  --shadow:0 8px 26px rgba(0,0,0,.25);
+  --radius:20px;
+  --read-scale:1.14; --read-weight:500;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --serif:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --display:"Cormorant Garamond",Georgia,serif; --display-weight:600;
+  --read-font:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --body-bg:radial-gradient(120% 50% at 50% 0%,#2a3470 0%,#141a3a 55%,#0d1128 100%) fixed,#10163a;
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
   padding-bottom:calc(72px + env(safe-area-inset-bottom))}
 .top{background:var(--brand);color:var(--brand-ink);padding:calc(10px + env(safe-area-inset-top)) 16px 12px}
-@media (prefers-color-scheme:dark){.top{background:#1b2236;color:#ebe8df;border-bottom:1px solid var(--line)}}
 .top-in{max-width:720px;margin:0 auto}
 .top h1{margin:0;font-size:1.15rem;letter-spacing:.2px}
 .top .sub{margin:0;font-size:.8rem;opacity:.8}
@@ -103,7 +130,6 @@ input[type=date],input[type=time]{font:inherit;padding:9px 10px;border:1px solid
 .tabs button.on{color:var(--brand);font-weight:700}
 .tabs button.on .ic{background:var(--gold-soft)}
 .tabs button.on::before{content:"";position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}
-@media (prefers-color-scheme:dark){.tabs button.on{color:var(--gold)}.tabs button.on::before{background:var(--gold)}}
 
 /* Parole de l'heure */
 .hour-verse{background:linear-gradient(135deg,var(--card),var(--gold-soft));border-color:var(--gold)}
@@ -184,7 +210,99 @@ body.selecting .fab{display:none}
 mark{background:var(--hl);color:var(--ink);border-radius:3px;padding:0 1px}
 .ref-link,.ctx-link{border:0;background:transparent;color:var(--gold);font:inherit;font-weight:700;padding:0;cursor:pointer}
 .ctx-link{display:block;margin-top:6px;font-size:.85rem;color:var(--brand)}
-@media (prefers-color-scheme:dark){.ctx-link{color:var(--gold)}}
 .reader .vs.flash{animation:flash 2.4s ease-out}
 @keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--gold)}100%{box-shadow:0 0 0 3px transparent}}
 @media (prefers-reduced-motion:reduce){.reader .vs.flash{animation:none;box-shadow:0 0 0 2px var(--gold)}}
+
+/* ================= Styles « Jardin » et « Veillée » ================= */
+body{background:var(--body-bg);font-family:var(--sans)}
+.top{background:transparent;color:var(--ink);padding:calc(10px + env(safe-area-inset-top)) 18px 0}
+.top h1{font-family:var(--display);font-weight:var(--display-weight);font-size:1rem;letter-spacing:.01em;display:flex;align-items:center;gap:8px}
+.top h1::before{content:"";width:22px;height:22px;border-radius:7px;background:url(icons/icon-192.png) center/cover}
+.top .sub{display:none}
+.card{border-radius:var(--radius);box-shadow:var(--shadow)}
+html[data-theme="jardin"] .card,html:not([data-theme]) .card{border-color:transparent}
+html[data-theme="veillee"] .card{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.09);box-shadow:none}
+.card h2,.passage{font-family:var(--display);font-weight:var(--display-weight);letter-spacing:-.01em}
+html[data-theme="veillee"] .card h2{font-size:1.35rem}
+html[data-theme="veillee"] .passage{font-size:1.75rem}
+.reader{font-family:var(--read-font);font-size:calc(var(--read-size) * var(--read-scale));font-weight:var(--read-weight)}
+.steps p,.verse-saved p,.hit p{font-family:var(--read-font)}
+html[data-theme="veillee"] .steps p,html[data-theme="veillee"] .verse-saved p,html[data-theme="veillee"] .hit p{font-size:1.12rem;font-weight:500}
+.btn{border-radius:14px}
+.seg{border-radius:16px;background:var(--card)}
+.day-head .nav{border-radius:14px}
+details.week{border-radius:16px}
+html[data-theme="jardin"] details.week{border-color:transparent;box-shadow:var(--shadow)}
+html[data-theme="veillee"] details.week{background:rgba(255,255,255,.05)}
+
+/* Menu du bas avec icônes dessinées */
+.tabs{border-top:0;box-shadow:0 -6px 20px rgba(0,0,0,.06);border-radius:22px 22px 0 0}
+html[data-theme="veillee"] .tabs{background:rgba(10,13,32,.92);border-top:1px solid rgba(255,255,255,.08);border-radius:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.tabs button{font-size:.68rem;font-weight:600;gap:3px;padding:9px 2px 10px}
+.tabs button .ic{display:flex;padding:4px 16px}
+.tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabs button.on::before{display:none}
+html[data-theme="jardin"] .tabs button.on{color:var(--ink)}
+html[data-theme="veillee"] .tabs button.on{color:#f3dca0}
+html[data-theme="veillee"] .tabs button.on .ic{background:rgba(217,183,112,.18)}
+
+/* Accueil : bienvenue et progression */
+.hello{margin:4px 2px 14px}
+.hello-row{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.hello small{display:block;font-size:.82rem;color:var(--muted);font-weight:500}
+.hello h2{font-family:var(--display);font-weight:var(--display-weight);font-size:1.6rem;line-height:1.15;margin:2px 0 0;letter-spacing:-.02em;text-wrap:balance}
+html[data-theme="veillee"] .hello{text-align:center}
+html[data-theme="veillee"] .hello-row{flex-direction:column;align-items:center}
+html[data-theme="veillee"] .hello small{text-transform:uppercase;letter-spacing:.16em;font-size:.72rem;color:var(--gold)}
+html[data-theme="veillee"] .hello h2{font-size:2rem;font-weight:500;letter-spacing:0}
+.hello-ring{flex:none;width:58px;height:58px}
+.hello-bar{display:flex;align-items:center;gap:10px;font-size:.75rem;color:var(--muted);margin-top:10px;width:100%}
+.hello-bar .bar{flex:1;height:6px;border-radius:9px;background:var(--line);overflow:hidden}
+.hello-bar .bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#d9b770,#f3dca0)}
+html[data-theme="jardin"] .hello-bar{display:none}
+html[data-theme="veillee"] .hello-ring{display:none}
+
+/* Parole de l'heure */
+.hour-verse{background:var(--hero);color:var(--hero-ink);border:0;position:relative;overflow:hidden}
+.hour-verse .kicker{color:var(--hero-ink);display:inline-block;background:rgba(255,255,255,.16);padding:3px 11px;border-radius:99px;text-transform:none;letter-spacing:0;font-size:.75rem}
+.hour-verse blockquote{font-family:var(--sans);font-weight:600;font-size:1.12rem;line-height:1.5;margin:12px 0 8px}
+.hour-verse .ref{color:var(--hero-sub)}
+.hour-verse p{color:var(--hero-ink);opacity:.78}
+.hour-verse .ctx-link{color:var(--hero-ink)}
+html[data-theme="jardin"] .hour-verse::before{content:"\201C";position:absolute;right:12px;top:-26px;font:800 130px/1 var(--display);color:rgba(255,255,255,.12)}
+html[data-theme="veillee"] .hour-verse{border:1px solid rgba(217,183,112,.35);text-align:center}
+html[data-theme="veillee"] .hour-verse .kicker{background:none;text-transform:uppercase;letter-spacing:.18em;font-size:.7rem;color:var(--gold);padding:0}
+html[data-theme="veillee"] .hour-verse blockquote{font-family:var(--serif);font-style:italic;font-weight:500;font-size:1.4rem;line-height:1.4}
+html[data-theme="veillee"] .hour-verse .ctx-link{color:var(--gold);margin-left:auto;margin-right:auto}
+
+/* Lecture du jour mise en avant */
+.today-hero{display:grid;grid-template-columns:64px 1fr;gap:14px;align-items:center}
+.today-hero .art{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--coral-soft),var(--coral));display:flex;align-items:center;justify-content:center;color:#7a2f16}
+.today-hero .art svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+html[data-theme="veillee"] .today-hero .art{background:rgba(217,183,112,.16);color:var(--gold)}
+.today-hero small{font-size:.8rem;color:var(--muted);font-weight:600}
+.today-hero h2{margin:1px 0 1px;font-size:1.3rem}
+html[data-theme="veillee"] .today-hero h2{font-size:1.6rem}
+.today-hero p{margin:0;font-size:.82rem;color:var(--muted)}
+.cta{grid-column:1/-1;display:flex;justify-content:center;align-items:center;gap:8px;border:0;border-radius:16px;padding:13px;background:var(--cta);color:var(--cta-ink);font:inherit;font-weight:700;cursor:pointer}
+.cta.done{background:var(--gold-soft);color:var(--ink)}
+.mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}
+.mini-stats div{background:var(--card);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow)}
+html[data-theme="veillee"] .mini-stats div{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);box-shadow:none}
+.mini-stats b{display:block;font-family:var(--display);font-weight:var(--display-weight);font-size:1.35rem;color:var(--brand)}
+html[data-theme="veillee"] .mini-stats b{color:#f3dca0;font-weight:500;font-size:1.6rem}
+.mini-stats span{font-size:.78rem;color:var(--muted)}
+
+/* Choix du style dans Réglages */
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.theme-opt{border:2px solid var(--line);border-radius:16px;padding:8px;background:transparent;color:var(--ink);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:center}
+.theme-opt.on{border-color:var(--brand)}
+.theme-opt .sw{width:100%;height:56px;border-radius:10px;display:flex;align-items:flex-end;padding:6px;gap:4px}
+.theme-opt .sw i{height:10px;border-radius:4px;flex:1}
+.sw-jardin{background:#f2f5f1}.sw-jardin i:nth-child(1){background:#2f6b4f}.sw-jardin i:nth-child(2){background:#f6a68a}.sw-jardin i:nth-child(3){background:#17241d}
+.sw-veillee{background:radial-gradient(120% 90% at 50% 0%,#2a3470,#10163a)}.sw-veillee i:nth-child(1){background:#d9b770}.sw-veillee i:nth-child(2){background:#f1e9d8}.sw-veillee i:nth-child(3){background:#34325a}
+.sw-auto{background:linear-gradient(110deg,#f2f5f1 50%,#10163a 50%)}.sw-auto i:nth-child(1){background:#2f6b4f}.sw-auto i:nth-child(2){background:#d9b770}.sw-auto i:nth-child(3){background:#f6a68a}
+html .card.hour-verse{background:var(--hero)}
+html[data-theme="veillee"] .card.hour-verse{background:var(--hero);border-color:rgba(217,183,112,.35)}
+html[data-theme="veillee"] body{font-variant-numeric:lining-nums}
