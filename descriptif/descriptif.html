@@ -58,16 +58,16 @@ li{margin:3px 0}
 <header>
   <div class="kicker">Descriptif de fonctionnement</div>
   <h1>Bible en un an</h1>
-  <p class="lead">Une application pour lire et méditer toute la Bible en une année, du lundi au samedi, avec chaque heure une parole d’encouragement : « C’est de l’abondance du cœur que la bouche parle » (Luc 6:45).</p>
+  <p class="lead">Une application pour lire et méditer toute la Bible en une année, du lundi au samedi, et pour consulter librement la Parole de Dieu à tout moment, avec chaque heure une parole d’encouragement : « C’est de l’abondance du cœur que la bouche parle » (Luc 6:45).</p>
   <p class="meta">Adresse : <a href="https://bible-en-un-an.vercel.app" target="_blank" rel="noopener">bible-en-un-an.vercel.app</a> · Mis à jour le 13 novembre 2026</p>
   <div class="facts">
+    <div class="fact"><b>66</b><span>livres à consulter librement, avec recherche</span></div>
     <div class="fact"><b>312</b><span>jours de lecture, du lundi au samedi</span></div>
-    <div class="fact"><b>8 à 16 min</b><span>de lecture par jour</span></div>
     <div class="fact"><b>130</b><span>versets d’encouragement pour la parole de l’heure</span></div>
     <div class="fact"><b>12</b><span>couleurs de surlignage</span></div>
   </div>
   <nav aria-label="Sommaire">
-    <a href="#installer">Installer</a><a href="#demarrer">Démarrer</a><a href="#aujourdhui">Aujourd’hui</a><a href="#surligner">Surligner</a>
+    <a href="#installer">Installer</a><a href="#demarrer">Démarrer</a><a href="#aujourdhui">Aujourd’hui</a><a href="#bible">Bible</a><a href="#surligner">Surligner</a>
     <a href="#parole">Parole de l’heure</a><a href="#plan">Plan</a><a href="#progression">Progression</a><a href="#reglages">Réglages</a>
     <a href="#donnees">Données</a><a href="#journal">Évolutions</a>
   </nav>
@@ -89,13 +89,13 @@ li{margin:3px 0}
 <section id="demarrer">
   <div class="kicker">Premier lancement</div>
   <h2>Choisir sa date de départ</h2>
-  <p>À la première ouverture, on choisit le jour du début de la lecture (par défaut le lundi suivant), ou « Commencer aujourd’hui ». Tout le calendrier des 312 jours se cale sur cette date. Aucun compte, aucune inscription.</p>
+  <p>À la première ouverture, on choisit le jour du début de la lecture (par défaut le lundi suivant), ou « Commencer aujourd’hui ». Tout le calendrier des 312 jours se cale sur cette date. Aucun compte, aucune inscription. L’onglet Bible, lui, est utilisable tout de suite, même sans commencer le programme.</p>
 </section>
 
 <section id="aujourdhui">
   <div class="kicker">Onglet 1</div>
   <h2>Aujourd’hui</h2>
-  <p>La page principale, de haut en bas :</p>
+  <p>La page du programme de lecture, de haut en bas :</p>
   <ol class="steps">
     <li><b>Parole de l’heure</b> : un verset d’encouragement qui change chaque heure.</li>
     <li><b>Le passage du jour</b> (par exemple « Genèse 39–41 »), avec la date et la durée de lecture. Les flèches ‹ › passent au jour précédent ou suivant. Un badge indique « aujourd’hui », « lu ✓ » ou « à rattraper ».</li>
@@ -116,6 +116,26 @@ li{margin:3px 0}
   <p>Pas de lecture : c’est un jour de repos et de récapitulation, avec des questions pour faire le point, les lectures de la semaine et les versets surlignés pendant la semaine.</p>
 </section>
 
+<section id="bible">
+  <div class="kicker">Onglet 2</div>
+  <h2>Bible</h2>
+  <p>Au-delà du programme, l’onglet Bible permet de consulter toute la Parole de Dieu (Louis Segond 1910), à tout moment et sans connexion.</p>
+  <h3>Lire un chapitre</h3>
+  <ul>
+    <li>Toucher le titre (par exemple « Jean 3 ▾ ») ouvre la liste des 66 livres, Ancien et Nouveau Testament, puis la grille des chapitres.</li>
+    <li>Les flèches ‹ › et les boutons « Précédent / Suivant » passent au chapitre voisin, d’un livre à l’autre.</li>
+    <li>L’appli se souvient du dernier chapitre ouvert.</li>
+    <li>On surligne et on copie les versets comme dans la lecture du jour. Un lien ouvre le même chapitre dans la Bible du Semeur.</li>
+  </ul>
+  <h3>Chercher</h3>
+  <ul>
+    <li><b>Une référence</b> ouvre directement le passage et met le verset en évidence : « Jean 3:16 », « Psaume 23 », « 1 Co 13:4 », « Jn 3 », « Jude 3 ».</li>
+    <li><b>Un mot ou une phrase</b> liste tous les versets qui le contiennent, sans tenir compte des accents ni des majuscules, avec le nombre de résultats dans l’Ancien et le Nouveau Testament. Toucher un résultat ouvre le verset dans son chapitre.</li>
+  </ul>
+  <h3>Depuis le reste de l’appli</h3>
+  <p>« Lire dans son contexte », sous la parole de l’heure (carte et bulle), ouvre le chapitre du verset. Dans Progression, toucher la référence d’un verset surligné l’ouvre aussi.</p>
+</section>
+
 <section id="surligner">
   <div class="kicker">Pendant la lecture</div>
   <h2>Surligner des versets en couleurs</h2>
@@ -129,6 +149,7 @@ li{margin:3px 0}
   <div class="dots" aria-label="Les 12 couleurs">
     <i style="background:#f5c518"></i><i style="background:#f08c00"></i><i style="background:#e5484d"></i><i style="background:#e93d82"></i><i style="background:#8e4ec6"></i><i style="background:#3e7bfa"></i><i style="background:#00b4d8"></i><i style="background:#12a594"></i><i style="background:#30a46c"></i><i style="background:#94c11f"></i><i style="background:#a0522d"></i><i style="background:#7a869a"></i>
   </div>
+  <p>Les surlignages sont communs à toute l’appli : un verset surligné dans la lecture du jour l’est aussi dans l’onglet Bible, et inversement.</p>
   <p>Chacun s’organise librement : les couleurs n’ont pas de nom au départ. Dans Réglages, on peut donner un nom à une couleur (« Combat », « Action de grâce », « Identité en Christ », « Promesses »…), et ce nom apparaît sous la pastille.</p>
 </section>
 
@@ -138,7 +159,7 @@ li{margin:3px 0}
   <p>Des versets choisis pour encourager, rappeler que nous sommes bénis et que Dieu n’abandonne pas ses enfants. L’idée : remplir son cœur de la Parole de Dieu plutôt que de paroles négatives (Luc 6:45). Le verset change à chaque heure pleine, et tout le monde reçoit le même verset à la même heure.</p>
   <h3>Trois façons de la recevoir</h3>
   <ul>
-    <li><b>La carte</b> en haut de la page Aujourd’hui.</li>
+    <li><b>La carte</b> en haut de la page Aujourd’hui, avec « Lire dans son contexte ».</li>
     <li><b>La bulle</b> : elle s’ouvre d’elle-même une fois par heure quand on ouvre l’appli, et reste disponible jusqu’à l’heure suivante grâce au bouton ✨ en bas à droite. Un point orange sur ✨ signale un verset pas encore lu.</li>
     <li><b>La notification</b>, même quand l’appli est fermée. Le verset entier se lit dans la notification (la déplier sur Android, appui long sur iPhone). La toucher ouvre l’appli sur la bulle.</li>
   </ul>
@@ -146,24 +167,24 @@ li{margin:3px 0}
 </section>
 
 <section id="plan">
-  <div class="kicker">Onglet 2</div>
+  <div class="kicker">Onglet 3</div>
   <h2>Plan</h2>
   <p>Les 52 semaines du plan, semaine par semaine, avec le nombre de jours lus. La semaine en cours est ouverte. Un point vert marque une lecture terminée, et les jours en retard sont signalés. Toucher un jour l’ouvre.</p>
 </section>
 
 <section id="progression">
-  <div class="kicker">Onglet 3</div>
+  <div class="kicker">Onglet 4</div>
   <h2>Progression</h2>
   <ul>
     <li><b>Le pourcentage de la Bible lue</b>, calculé sur la longueur réelle des textes lus.</li>
     <li>Le nombre de jours lus, de jours d’affilée et de jours à rattraper.</li>
     <li>En cas de retard, un message sans culpabilité et deux choix : <b>« Reprendre à mon rythme »</b> (le plan est décalé pour que la prochaine lecture non faite devienne celle du jour) ou ouvrir le premier jour non lu.</li>
-    <li><b>Les versets surlignés</b>, du plus récent au plus ancien, avec un filtre par couleur.</li>
+    <li><b>Les versets surlignés</b> (programme et onglet Bible), du plus récent au plus ancien, avec un filtre par couleur. Toucher une référence ouvre le chapitre.</li>
   </ul>
 </section>
 
 <section id="reglages">
-  <div class="kicker">Onglet 4</div>
+  <div class="kicker">Onglet 5</div>
   <h2>Réglages</h2>
   <ul>
     <li><b>Installer sur le téléphone</b> : bouton ou mode d’emploi adapté au téléphone (disparaît une fois l’appli installée).</li>
@@ -187,6 +208,7 @@ li{margin:3px 0}
   <div class="kicker">Historique</div>
   <h2>Journal des évolutions</h2>
   <ul class="log">
+    <li><time datetime="2026-11-13">13 nov. 2026</time><div><b>Onglet Bible.</b> Consultation libre des 66 livres, recherche par mot ou par référence, « Lire dans son contexte » depuis la parole de l’heure, surlignages communs à toute l’appli.</div></li>
     <li><time datetime="2026-11-13">13 nov. 2026</time><div><b>Surlignage en couleurs.</b> Sélection d’un ou plusieurs versets, 12 couleurs à nommer librement, copie du texte avec sa référence, filtre par couleur dans Progression.</div></li>
     <li><time datetime="2026-11-11">11 nov. 2026</time><div><b>Bulle de la parole de l’heure</b> et bouton ✨, ouverture depuis la notification, verset complet dans la notification.</div></li>
     <li><time datetime="2026-11-10">10 nov. 2026</time><div><b>Notifications « Un verset chaque heure »</b>, même appli fermée, avec plage horaire.</div></li>
