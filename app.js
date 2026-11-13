@@ -109,13 +109,29 @@ function h(tag, attrs, ...kids) {
 
 /* ---------- État ---------- */
 let LSG = null, PLAN = null, TOTAL_CHARS = 0;
+// Couleurs de surlignage proposées, et catégories par défaut
+const COULEURS = ['#f5c518', '#f08c00', '#e5484d', '#e93d82', '#8e4ec6', '#3e7bfa', '#12a594', '#30a46c'];
+const CATS_DEFAUT = () => [
+  { id: 'jour', n: 'Verset du jour', c: '#f5c518' },
+  { id: 'combat', n: 'Combat', c: '#e5484d' },
+  { id: 'grace', n: 'Action de grâce', c: '#30a46c' },
+  { id: 'identite', n: 'Identité en Christ', c: '#3e7bfa' }];
 let S = load();
-const V = { tab: 'today', day: null, ver: 'lsg' };
+const V = { tab: 'today', day: null, ver: 'lsg', sel: new Set(), selDay: null };
 
-function load() {
-  try { const s = JSON.parse(localStorage.getItem(LS_KEY)); if (s && s.start) return Object.assign({ done: {}, verses: {}, font: 19, remind: '06:30' }, s); } catch (e) {}
-  return { start: null, done: {}, verses: {}, font: 19, remind: '06:30' };
+function norm(s) {
+  s = Object.assign({ start: null, done: {}, verses: {}, font: 19, remind: '06:30' }, s || {});
+  if (!Array.isArray(s.cats) || !s.cats.length) s.cats = CATS_DEFAUT();
+  if (!s.vc || typeof s.vc !== 'object') s.vc = {}; // verset → catégorie
+  return s;
 }
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(LS_KEY)); if (s && s.start) return norm(s); } catch (e) {}
+  return norm();
+}
+// Catégorie d'un verset surligné (les anciens surlignages vont dans la première catégorie)
+const catOf = key => S.cats.find(c => c.id === S.vc[key]) || S.cats[0];
+const fond = c => c + '59'; // couleur à ~35 % d'opacité
 function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} }
 
 /* ---------- Calendrier du plan (lundi – samedi) ---------- */
@@ -163,6 +179,7 @@ function render() {
   document.documentElement.style.setProperty('--read-size', S.font + 'px');
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === V.tab));
   view.replaceChildren();
+  clearSel();
   if (!S.start) { view.append(welcome()); return; }
   const fn = { today: viewToday, plan: viewPlan, progress: viewProgress, settings: viewSettings }[V.tab];
   view.append(...[].concat(fn()).filter(Boolean));
@@ -298,7 +315,7 @@ function reading(n, st) {
       h('li', null, h('h4', null, 'Lire'), h('p', null, 'Lisez le passage lentement, si possible à voix haute. Une seule lecture attentive vaut mieux que deux lectures pressées.')),
       h('li', null, h('h4', null, 'Observer'), h('p', null, pick(OBSERVER))),
       h('li', null, h('h4', null, 'Méditer'), h('p', null, theme.q[(wk + n) % theme.q.length])),
-      h('li', null, h('h4', null, 'Retenir'), h('p', null, 'Touchez un verset du texte pour le garder comme verset de la journée.')),
+      h('li', null, h('h4', null, 'Retenir'), h('p', null, 'Touchez un ou plusieurs versets du texte, puis choisissez une couleur pour les ranger dans une catégorie (combat, action de grâce, identité en Christ…).')),
       h('li', null, h('h4', null, 'Appliquer'), h('p', null, pick(APPLIQUER, 1))),
       h('li', null, h('h4', null, 'Prier'), h('p', null, pick(PRIER, 2)))));
 
@@ -326,14 +343,15 @@ function readerLSG(n) {
       const p = h('p', { class: BLOCK_BOOKS.has(b) ? 'blocks' : '' });
       LSG[b][c - 1].forEach((txt, i) => {
         const key = `${b}.${c}.${i + 1}`;
-        const sp = h('span', { class: 'vs' + (kept.has(key) ? ' on' : ''), 'data-k': key, onclick: () => toggleVerse(n, key, sp) },
+        const sp = h('span', { class: 'vs', 'data-k': key, onclick: () => toggleSel(n, key) },
           h('sup', null, i + 1), txt + ' ');
+        paintVerse(sp, kept.has(key));
         p.append(sp);
       });
       reader.append(p);
     }
   }
-  wrap.append(reader, h('p', { class: 'hint' }, 'Touchez un verset pour le surligner comme verset de la journée.'));
+  wrap.append(reader, h('p', { class: 'hint' }, 'Touchez un ou plusieurs versets, puis choisissez une couleur.'));
   return wrap;
 }
 
@@ -349,13 +367,70 @@ function readerSemeur(n) {
     h('p', { class: 'muted small' }, 'Astuce : lisez d’abord dans la Bible du Semeur, puis revenez dans « Louis Segond » pour comparer et surligner votre verset.'));
 }
 
-function toggleVerse(n, key, el) {
-  const arr = S.verses[n] || (S.verses[n] = []);
-  const i = arr.indexOf(key);
-  if (i >= 0) arr.splice(i, 1); else arr.push(key);
-  if (!arr.length) delete S.verses[n];
-  el.classList.toggle('on', i < 0); save();
+/* ---------- Sélection et surlignage en couleurs ---------- */
+const isKept = (n, key) => (S.verses[n] || []).includes(key);
+const verseEl = key => view.querySelector(`.vs[data-k="${key}"]`);
+function paintVerse(sp, on) {
+  const key = sp.dataset.k, c = on ? catOf(key) : null;
+  sp.classList.toggle('on', on);
+  sp.style.backgroundColor = c ? fond(c.c) : '';
+  sp.classList.toggle('sel', V.sel.has(key));
 }
+function toggleSel(n, key) {
+  if (V.selDay !== n) { clearSel(); V.selDay = n; }
+  if (V.sel.has(key)) V.sel.delete(key); else V.sel.add(key);
+  const sp = verseEl(key); if (sp) sp.classList.toggle('sel', V.sel.has(key));
+  updateSelBar();
+}
+function clearSel() {
+  V.sel.forEach(k => { const sp = verseEl(k); if (sp) sp.classList.remove('sel'); });
+  V.sel.clear(); V.selDay = null; updateSelBar();
+}
+// Clés sélectionnées, dans l'ordre du texte
+const selOrdered = () => [...view.querySelectorAll('.vs.sel')].map(sp => sp.dataset.k);
+function applyCat(catId) {
+  const n = V.selDay, arr = S.verses[n] || (S.verses[n] = []);
+  for (const k of selOrdered()) { if (!arr.includes(k)) arr.push(k); S.vc[k] = catId; }
+  save(); finishSel();
+}
+function removeHl() {
+  const n = V.selDay, arr = S.verses[n] || [];
+  for (const k of V.sel) { const i = arr.indexOf(k); if (i >= 0) arr.splice(i, 1); delete S.vc[k]; }
+  if (!arr.length) delete S.verses[n];
+  save(); finishSel();
+}
+function finishSel() {
+  const keys = [...V.sel], n = V.selDay; V.sel.clear(); V.selDay = null;
+  keys.forEach(k => { const sp = verseEl(k); if (sp) paintVerse(sp, isKept(n, k)); });
+  updateSelBar();
+}
+function refOf(key) { const [b, c, v] = key.split('.').map(Number); return { b, c, v, txt: LSG[b][c - 1][v - 1] }; }
+function copySel() {
+  const ks = selOrdered(); if (!ks.length) return;
+  const r = ks.map(refOf), a = r[0], z = r[r.length - 1];
+  const ref = `${BOOKS[a.b][0]} ${a.c}:${a.v}` + (ks.length > 1 ? (a.c === z.c && a.b === z.b ? `-${z.v}` : ` – ${BOOKS[z.b][0]} ${z.c}:${z.v}`) : '');
+  const txt = `« ${r.map(x => x.txt).join(' ')} » (${ref}, Louis Segond)`;
+  const done = () => { copyBtn.textContent = 'Copié ✓'; setTimeout(() => { copyBtn.textContent = 'Copier'; }, 1500); };
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done, () => prompt('Copiez le texte :', txt));
+  else prompt('Copiez le texte :', txt);
+}
+const selCount = h('span', { class: 'sel-count' });
+const selChips = h('div', { class: 'sel-chips' });
+const copyBtn = h('button', { class: 'sel-act', onclick: copySel }, 'Copier');
+const rmBtn = h('button', { class: 'sel-act', onclick: removeHl }, 'Effacer la couleur');
+const selBar = h('div', { class: 'selbar', hidden: true, role: 'toolbar', 'aria-label': 'Surligner les versets sélectionnés' },
+  h('div', { class: 'sel-top' }, selCount, h('button', { class: 'sel-x', 'aria-label': 'Annuler la sélection', onclick: clearSel }, '✕')),
+  selChips, h('div', { class: 'sel-acts' }, copyBtn, rmBtn));
+function updateSelBar() {
+  const k = V.sel.size;
+  selBar.hidden = !k; document.body.classList.toggle('selecting', !!k);
+  if (!k) return;
+  selCount.textContent = `${k} verset${k > 1 ? 's' : ''} sélectionné${k > 1 ? 's' : ''} · choisissez une couleur`;
+  selChips.replaceChildren(...S.cats.map(c => h('button', { class: 'cat-chip', onclick: () => applyCat(c.id) },
+    h('span', { class: 'cat-dot', style: `background:${c.c}` }), c.n)));
+  rmBtn.hidden = ![...V.sel].some(x => isKept(V.selDay, x));
+}
+document.body.append(selBar);
 function toggleDone(n) {
   if (S.done[n]) delete S.done[n]; else S.done[n] = iso(today());
   save(); render();
@@ -382,7 +457,10 @@ function sunday(last) {
 
 function savedVerse(key) {
   const [b, c, v] = key.split('.').map(Number);
-  return h('div', { class: 'verse-saved' }, h('div', { class: 'ref' }, `${BOOKS[b][0]} ${c}:${v}`), h('p', null, LSG[b][c - 1][v - 1]));
+  const cat = catOf(key);
+  return h('div', { class: 'verse-saved', 'data-cat': cat.id, style: `border-left-color:${cat.c}` },
+    h('div', { class: 'ref' }, `${BOOKS[b][0]} ${c}:${v}`, h('span', { class: 'cat-tag', style: `background:${fond(cat.c)}` }, cat.n)),
+    h('p', null, LSG[b][c - 1][v - 1]));
 }
 
 /* ---------- Plan ---------- */
@@ -432,9 +510,27 @@ function viewProgress() {
       h('button', { class: 'btn alt', onclick: () => { V.day = firstUndone(); V.tab = 'today'; render(); } }, 'Ouvrir le premier jour non lu')));
   }
   const keys = []; for (const n of Object.keys(S.verses).map(Number).sort((a, b) => a - b)) S.verses[n].forEach(k => keys.push(k));
-  out.push(h('div', { class: 'card' }, h('h2', null, `Versets retenus (${keys.length})`),
-    keys.length ? keys.slice().reverse().map(savedVerse) : h('p', { class: 'muted' }, 'Les versets que vous surlignez pendant la lecture apparaîtront ici.')));
+  out.push(h('div', { class: 'card' }, h('h2', null, `Versets surlignés (${keys.length})`),
+    keys.length ? versesByCat(keys) : h('p', { class: 'muted' }, 'Les versets que vous surlignez pendant la lecture apparaîtront ici, rangés par couleur.')));
   return out;
+}
+// Liste des versets surlignés, avec un filtre par catégorie
+function versesByCat(keys) {
+  const list = h('div', null, keys.slice().reverse().map(savedVerse));
+  const count = id => keys.filter(k => catOf(k).id === id).length;
+  const chips = [];
+  const filter = (id, btn) => {
+    chips.forEach(x => x.classList.toggle('on', x === btn));
+    list.querySelectorAll('.verse-saved').forEach(el => { el.hidden = !!id && el.dataset.cat !== id; });
+  };
+  const all = h('button', { class: 'cat-chip on', onclick: () => filter(null, all) }, `Tous · ${keys.length}`);
+  chips.push(all);
+  for (const c of S.cats) {
+    const k = count(c.id); if (!k) continue;
+    const b = h('button', { class: 'cat-chip', onclick: () => filter(c.id, b) }, h('span', { class: 'cat-dot', style: `background:${c.c}` }), `${c.n} · ${k}`);
+    chips.push(b);
+  }
+  return [h('div', { class: 'sel-chips' }, chips), list];
 }
 
 function shiftPlan() {
@@ -453,6 +549,7 @@ function viewSettings() {
   return [
     ...installCard(),
     ...pushCard(),
+    catsCard(),
     h('div', { class: 'card' }, h('h2', null, 'Rappel quotidien'),
       h('p', { class: 'muted small' }, 'Génère un rappel dans le calendrier de votre téléphone, répété du lundi au samedi pendant 312 jours. Il fonctionne même quand l’application est fermée.'),
       h('label', { class: 'f' }, 'Heure du rappel'), timeIn,
@@ -467,11 +564,41 @@ function viewSettings() {
       h('button', { class: 'btn alt', onclick: exportData }, 'Exporter ma progression'),
       h('button', { class: 'btn alt', onclick: () => fileIn.click() }, 'Importer'), fileIn,
       h('hr', { class: 'sep' }),
-      h('button', { class: 'btn alt', onclick: () => { if (confirm('Effacer toute la progression et recommencer ?')) { S = { start: null, done: {}, verses: {}, font: 19, remind: '06:30' }; save(); V.day = null; V.tab = 'today'; render(); } } }, 'Tout réinitialiser')),
+      h('button', { class: 'btn alt', onclick: () => { if (confirm('Effacer toute la progression et recommencer ?')) { S = norm(); save(); V.day = null; V.tab = 'today'; render(); } } }, 'Tout réinitialiser')),
     h('div', { class: 'card small muted' },
       h('p', null, 'Texte biblique : Louis Segond (1910), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
       h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez « Un verset chaque heure », seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et votre plage d’heures sont conservés, et ils sont effacés dès que vous désactivez.'))
   ];
+}
+
+/* ---------- Catégories de surlignage ---------- */
+function catsCard() {
+  const used = id => Object.values(S.verses).flat().filter(k => catOf(k).id === id).length;
+  const rows = S.cats.map((c, i) => h('div', { class: 'cat-row' },
+    h('div', { class: 'cat-line' },
+      h('span', { class: 'cat-dot big', style: `background:${c.c}` }),
+      h('input', { type: 'text', value: c.n, maxlength: 30, 'aria-label': 'Nom de la catégorie',
+        onchange: e => { c.n = e.target.value.trim() || c.n; save(); render(); } }),
+      S.cats.length > 1 ? h('button', { class: 'sel-x', 'aria-label': `Supprimer « ${c.n} »`, onclick: () => {
+        const u = used(c.id);
+        const repli = S.cats.find(x => x.id !== c.id);
+        if (u && !confirm(`${u} verset${u > 1 ? 's' : ''} ${u > 1 ? 'sont' : 'est'} dans « ${c.n} ». Ils passeront dans « ${repli.n} ». Supprimer la catégorie ?`)) return;
+        // Les versets sans catégorie suivent la première : on fixe la leur avant que l'ordre ne change
+        for (const k of Object.values(S.verses).flat()) if (!S.cats.some(x => x.id === S.vc[k])) S.vc[k] = S.cats[0].id;
+        for (const k of Object.keys(S.vc)) if (S.vc[k] === c.id) S.vc[k] = repli.id;
+        S.cats.splice(i, 1);
+        save(); render();
+      } }, '✕') : null),
+    h('div', { class: 'swatches' }, COULEURS.map(col => h('button', {
+      class: 'swatch' + (col === c.c ? ' on' : ''), style: `background:${col}`, 'aria-label': 'Choisir cette couleur',
+      onclick: () => { c.c = col; save(); render(); } })))));
+  return h('div', { class: 'card' }, h('h2', null, 'Couleurs de surlignage'),
+    h('p', { class: 'muted small' }, 'Chaque couleur correspond à une catégorie de versets. Renommez-les, changez leur couleur ou ajoutez-en.'),
+    rows,
+    S.cats.length < 12 ? h('button', { class: 'btn alt', onclick: () => {
+      const libre = COULEURS.find(col => !S.cats.some(c => c.c === col)) || COULEURS[S.cats.length % COULEURS.length];
+      S.cats.push({ id: 'c' + Date.now().toString(36), n: 'Nouvelle catégorie', c: libre }); save(); render();
+    } }, '+ Ajouter une catégorie') : null);
 }
 
 /* ---------- Installation sur l'écran d'accueil ---------- */
@@ -572,7 +699,7 @@ function importData(e) {
     try {
       const o = JSON.parse(r.result);
       if (!o || typeof o.start !== 'string' || typeof o.done !== 'object') throw new Error('format');
-      S = Object.assign({ done: {}, verses: {}, font: 19, remind: '06:30' }, o); save(); V.day = null; V.tab = 'today'; render();
+      S = norm(o); save(); V.day = null; V.tab = 'today'; render();
     } catch (err) { alert('Fichier non reconnu.'); }
   };
   r.readAsText(f);

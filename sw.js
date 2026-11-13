@@ -1,5 +1,5 @@
 // Service worker : fonctionnement hors ligne (stale-while-revalidate) + notifications
-const CACHE = 'bible-an-v9';
+const CACHE = 'bible-an-v10';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'data/lsg.js', 'data/plan.js', 'data/versets.js', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
