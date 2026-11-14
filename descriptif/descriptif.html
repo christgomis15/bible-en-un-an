@@ -58,17 +58,17 @@ li{margin:3px 0}
 <header>
   <div class="kicker">Descriptif de fonctionnement</div>
   <h1>Bible en un an</h1>
-  <p class="lead">Une application pour lire et méditer toute la Bible en une année, du lundi au samedi, et pour consulter librement la Parole de Dieu à tout moment, avec chaque heure une parole d’encouragement : « C’est de l’abondance du cœur que la bouche parle » (Luc 6:45).</p>
-  <p class="meta">Adresse : <a href="https://bible-en-un-an.vercel.app" target="_blank" rel="noopener">bible-en-un-an.vercel.app</a> · Mis à jour le 13 novembre 2026</p>
+  <p class="lead">Une application pour lire et méditer toute la Bible en une année, du lundi au samedi, et pour consulter librement la Parole de Dieu à tout moment, avec des paroles d’encouragement au fil de la journée : « C’est de l’abondance du cœur que la bouche parle » (Luc 6:45).</p>
+  <p class="meta">Adresse : <a href="https://bible-en-un-an.vercel.app" target="_blank" rel="noopener">bible-en-un-an.vercel.app</a> · Mis à jour le 14 novembre 2026</p>
   <div class="facts">
     <div class="fact"><b>66</b><span>livres à consulter librement, avec recherche</span></div>
     <div class="fact"><b>312</b><span>jours de lecture, du lundi au samedi</span></div>
-    <div class="fact"><b>130</b><span>versets d’encouragement pour la parole de l’heure</span></div>
+    <div class="fact"><b>130</b><span>versets d’encouragement, 3 fois par jour par défaut</span></div>
     <div class="fact"><b>12</b><span>couleurs de surlignage</span></div>
   </div>
   <nav aria-label="Sommaire">
     <a href="#installer">Installer</a><a href="#demarrer">Démarrer</a><a href="#aujourdhui">Aujourd’hui</a><a href="#bible">Bible</a><a href="#surligner">Surligner</a>
-    <a href="#parole">Parole de l’heure</a><a href="#plan">Plan</a><a href="#progression">Progression</a><a href="#reglages">Réglages</a>
+    <a href="#parole">Parole de Dieu</a><a href="#plan">Plan</a><a href="#progression">Progression</a><a href="#reglages">Réglages</a>
     <a href="#donnees">Données</a><a href="#journal">Évolutions</a>
   </nav>
 </header>
@@ -98,7 +98,7 @@ li{margin:3px 0}
   <p>La page du programme de lecture, de haut en bas :</p>
   <ol class="steps">
     <li><b>Bienvenue</b> : la date, une salutation (« Bonjour, que Dieu bénisse votre journée ») et la part de la Bible déjà lue.</li>
-    <li><b>Parole de l’heure</b> : un verset d’encouragement qui change chaque heure.</li>
+    <li><b>Parole de Dieu</b> : un verset d’encouragement, renouvelé aux moments choisis (6 h, 12 h et 18 h par défaut).</li>
     <li><b>Lecture du jour</b> mise en avant, avec le passage, la durée, le thème et un grand bouton « Commencer la lecture » qui descend jusqu’au texte. Juste en dessous : les jours de lecture d’affilée et le nombre de versets surlignés.</li>
     <li><b>Le passage du jour</b> (par exemple « Genèse 39–41 »), avec la date et la durée de lecture. Les flèches ‹ › passent au jour précédent ou suivant. Un badge indique « aujourd’hui », « lu ✓ » ou « à rattraper ».</li>
     <li><b>Le texte</b> en Louis Segond 1910, avec A− / A+ pour la taille des lettres. L’onglet « Bible du Semeur » renvoie vers BibleGateway et YouVersion, car ce texte est protégé par des droits d’auteur.</li>
@@ -135,7 +135,7 @@ li{margin:3px 0}
     <li><b>Un mot ou une phrase</b> liste tous les versets qui le contiennent, sans tenir compte des accents ni des majuscules, avec le nombre de résultats dans l’Ancien et le Nouveau Testament. Toucher un résultat ouvre le verset dans son chapitre.</li>
   </ul>
   <h3>Depuis le reste de l’appli</h3>
-  <p>« Lire dans son contexte », sous la parole de l’heure (carte et bulle), ouvre le chapitre du verset. Dans Progression, toucher la référence d’un verset surligné l’ouvre aussi.</p>
+  <p>« Lire dans son contexte », sous la parole de Dieu (carte et bulle), ouvre le chapitre du verset. Dans Progression, toucher la référence d’un verset surligné l’ouvre aussi.</p>
 </section>
 
 <section id="surligner">
@@ -156,16 +156,18 @@ li{margin:3px 0}
 </section>
 
 <section id="parole">
-  <div class="kicker">Chaque heure</div>
-  <h2>La parole de l’heure</h2>
-  <p>Des versets choisis pour encourager, rappeler que nous sommes bénis et que Dieu n’abandonne pas ses enfants. L’idée : remplir son cœur de la Parole de Dieu plutôt que de paroles négatives (Luc 6:45). Le verset change à chaque heure pleine, et tout le monde reçoit le même verset à la même heure.</p>
+  <div class="kicker">Au fil de la journée</div>
+  <h2>La parole de Dieu</h2>
+  <p>Des versets choisis pour encourager, rappeler que nous sommes bénis et que Dieu n’abandonne pas ses enfants. L’idée : remplir son cœur de la Parole de Dieu plutôt que de paroles négatives (Luc 6:45). Tout le monde reçoit le même verset à la même heure.</p>
+  <h3>Des moments au choix, pour ne pas lasser</h3>
+  <p>Par défaut, <b>3 versets par jour : à 6 h, 12 h et 18 h</b>. Dans Réglages → « La parole de Dieu dans la journée », chacun peut choisir 1, 3 ou 5 versets par jour, toutes les heures de 7 h à 21 h, ou ses propres heures une par une. Entre deux moments, le dernier verset reste affiché.</p>
   <h3>Trois façons de la recevoir</h3>
   <ul>
     <li><b>La carte</b> en haut de la page Aujourd’hui, avec « Lire dans son contexte ».</li>
-    <li><b>La bulle</b> : elle s’ouvre d’elle-même une fois par heure quand on ouvre l’appli, et reste disponible jusqu’à l’heure suivante grâce au bouton ✨ en bas à droite. Un point orange sur ✨ signale un verset pas encore lu.</li>
+    <li><b>La bulle</b> : elle s’ouvre d’elle-même une fois à chaque nouveau moment quand on ouvre l’appli, et reste disponible jusqu’au moment suivant grâce au bouton ✨ en bas à droite. Un point orange sur ✨ signale un verset pas encore lu.</li>
     <li><b>La notification</b>, même quand l’appli est fermée. Le verset entier se lit dans la notification (la déplier sur Android, appui long sur iPhone). La toucher ouvre l’appli sur la bulle.</li>
   </ul>
-  <p>Les notifications s’activent dans Réglages → « Un verset chaque heure », avec une plage horaire au choix (7 h – 21 h par défaut).</p>
+  <p>Les notifications s’activent dans la même carte des Réglages. Elles arrivent aux heures choisies, même quand l’appli est fermée.</p>
 </section>
 
 <section id="plan">
@@ -192,7 +194,7 @@ li{margin:3px 0}
     <li><b>Installer sur le téléphone</b> : bouton ou mode d’emploi adapté au téléphone (disparaît une fois l’appli installée).</li>
     <li><b>Apparence</b> : choisir le style de l’appli, à tout moment. <b>Jardin</b> est clair et frais (vert, corail, blanc). <b>Veillée</b> est bleu nuit et doré, avec de grandes lettres classiques, reposant le soir. <b>Automatique</b> (par défaut) suit l’heure : Jardin de 7 h à 19 h, Veillée la nuit. Le changement se fait tout seul, même quand l’appli est ouverte.</li>
     <li><b>Décor de nuit</b> (style Veillée) : un ciel étoilé, avec un seul motif à la fois, qui change chaque nuit et reste le même toute la nuit. Les motifs sont le ciel étoilé avec une étoile filante, la pleine lune, la demi-lune, l’étoile de Christ, la lampe (« Ta parole est une lampe à mes pieds », Psaume 119:105) et la colombe au rameau d’olivier (Genèse 8:11). Réglages indique le décor de la nuit.</li>
-    <li><b>Un verset chaque heure</b> : activer ou couper les notifications, et choisir la plage horaire.</li>
+    <li><b>La parole de Dieu dans la journée</b> : choisir combien de versets recevoir et à quelles heures (3 par jour par défaut), et activer ou couper les notifications.</li>
     <li><b>Mes couleurs de surlignage</b> : nommer chaque couleur et voir combien de versets elle contient.</li>
     <li><b>Rappel quotidien</b> : ajoute au calendrier du téléphone un rappel de lecture du lundi au samedi, à l’heure choisie.</li>
     <li><b>Date de départ</b> : changer la date décale tout le calendrier, sans perdre les jours déjà lus.</li>
@@ -204,7 +206,7 @@ li{margin:3px 0}
   <div class="kicker">Confidentialité</div>
   <h2>Où sont les données ?</h2>
   <p>La progression, les versets surlignés et les réglages restent <b>uniquement sur l’appareil</b>. Rien n’est envoyé. C’est pourquoi l’export est utile pour changer de téléphone.</p>
-  <p>Seule exception : quand les notifications sont activées, le serveur garde l’adresse technique de notification du navigateur, le fuseau horaire et la plage d’heures. Ces informations sont effacées dès qu’on désactive les notifications.</p>
+  <p>Seule exception : quand les notifications sont activées, le serveur garde l’adresse technique de notification du navigateur, le fuseau horaire et les heures choisies. Ces informations sont effacées dès qu’on désactive les notifications.</p>
   <p class="note">Texte biblique : Louis Segond 1910, domaine public. La Bible du Semeur (© Biblica) n’est pas incluse.</p>
 </section>
 
@@ -212,6 +214,7 @@ li{margin:3px 0}
   <div class="kicker">Historique</div>
   <h2>Journal des évolutions</h2>
   <ul class="log">
+    <li><time datetime="2026-11-14">14 nov. 2026</time><div><b>Moins de notifications, plus de choix.</b> La parole de Dieu passe à 3 versets par jour par défaut (6 h, 12 h, 18 h) au lieu de chaque heure. Chacun peut en choisir plus ou moins, et ses propres heures. Les abonnés existants passent automatiquement à 3 par jour.</div></li>
     <li><time datetime="2026-11-13">13 nov. 2026</time><div><b>Jour et nuit.</b> Le mode automatique suit l’heure (Jardin le jour, Veillée la nuit), et la nuit a un décor qui change chaque nuit : étoiles, pleine lune, demi-lune, étoile de Christ, lampe, colombe.</div></li>
     <li><time datetime="2026-11-13">13 nov. 2026</time><div><b>Nouveau look</b>, suite au retour d’un testeur : deux styles au choix (Jardin et Veillée) dans Réglages → Apparence, accueil repensé (bienvenue, lecture du jour mise en avant), icônes dessinées dans le menu, polices intégrées qui marchent hors connexion.</div></li>
     <li><time datetime="2026-11-13">13 nov. 2026</time><div><b>Onglet Bible.</b> Consultation libre des 66 livres, recherche par mot ou par référence, « Lire dans son contexte » depuis la parole de l’heure, surlignages communs à toute l’appli.</div></li>
@@ -228,7 +231,7 @@ li{margin:3px 0}
   <dl class="tech">
     <dt>Hébergement</dt><dd>Vercel, relié au dépôt GitHub « bible-en-un-an » : chaque modification envoyée sur GitHub met le site à jour automatiquement.</dd>
     <dt>Mise à jour des téléphones</dt><dd>L’appli garde une copie pour le hors-ligne ; elle prend la nouvelle version après avoir été fermée puis rouverte (parfois deux fois).</dd>
-    <dt>Notifications</dt><dd>Un envoi automatique chaque heure (tâche planifiée Vercel), avec les abonnements stockés dans Vercel Blob.</dd>
+    <dt>Notifications</dt><dd>Une tâche planifiée Vercel passe chaque heure et n’envoie le verset qu’aux appareils qui ont choisi cette heure-là. Les abonnements (avec leurs heures) sont stockés dans Vercel Blob.</dd>
   </dl>
 </section>
 </div>
