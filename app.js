@@ -144,6 +144,8 @@ function norm(s) {
       for (const k of s.verses[n]) s.hl[k] = s.vc[k] || s.cats[0].id;
   }
   delete s.verses; delete s.vc;
+  if (!Array.isArray(s.pushHours) || !s.pushHours.length) s.pushHours = [6, 12, 18];
+  delete s.pushFrom; delete s.pushTo;
   if (!s.pos) s.pos = { b: 42, c: 1 }; // dernier chapitre ouvert dans l'onglet Bible (Jean 1)
   return s;
 }
@@ -236,10 +238,27 @@ function versetDeLheure(d = new Date()) {
   const jour = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
   return L[((jour * 24 + d.getHours()) * 47) % L.length]; // ×47 : mélange l'ordre des versets
 }
+// Moments de la parole de Dieu : par défaut 6 h, 12 h et 18 h ; chacun peut en choisir plus (ou moins) dans Réglages.
+// Le verset affiché dans l'appli est celui du dernier moment passé, le même que celui de la notification.
+const HEURES_DEFAUT = [6, 12, 18];
+const myHours = () => (Array.isArray(S.pushHours) && S.pushHours.length ? S.pushHours : HEURES_DEFAUT).slice().sort((a, b) => a - b);
+function slotDate(d = new Date()) {
+  const hs = myHours(), hr = d.getHours();
+  const last = hs.filter(x => x <= hr).pop();
+  const s = new Date(d.getFullYear(), d.getMonth(), d.getDate(), last ?? hs[hs.length - 1]);
+  if (last === undefined) s.setDate(s.getDate() - 1); // avant le premier moment : verset de la veille au soir
+  return s;
+}
+function nextSlot(d = new Date()) {
+  const hs = myHours(), nx = hs.find(x => x > d.getHours());
+  return nx === undefined ? { h: hs[0], demain: true } : { h: nx, demain: false };
+}
+const versetDuMoment = () => versetDeLheure(slotDate());
+const momentLabel = () => `Parole de Dieu · ${pad(slotDate().getHours())} h`;
 function hourCard() {
-  const v = versetDeLheure(); if (!v) return null;
+  const v = versetDuMoment(); if (!v) return null;
   const card = h('div', { class: 'card hour-verse' },
-    h('div', { class: 'kicker' }, `Parole de l’heure · ${pad(new Date().getHours())} h`),
+    h('div', { class: 'kicker' }, momentLabel()),
     h('blockquote', null, v.t),
     h('div', { class: 'ref' }, v.r, contextBtn(v.r)),
     h('p', { class: 'muted small' }, '« C’est de l’abondance du cœur que la bouche parle » (Luc 6:45). Remplissons notre cœur de la Parole de Dieu.'));
@@ -260,21 +279,21 @@ function scheduleHourRefresh() {
 /* Bulle « Parole de l'heure » : bouton flottant visible sur toutes les pages,
    qui s'ouvre tout seul la première fois que l'appli est ouverte dans l'heure
    (ou quand on touche la notification), et reste disponible jusqu'à l'heure suivante. */
-const hourStamp = (d = new Date()) => `${iso(d)}T${pad(d.getHours())}`;
+const hourStamp = () => { const s = slotDate(); return `${iso(s)}T${pad(s.getHours())}`; }; // un « vu » par moment choisi
 let VU = ''; try { VU = localStorage.getItem('bible-an-vu') || ''; } catch (e) {}
 const markSeen = () => { VU = hourStamp(); try { localStorage.setItem('bible-an-vu', VU); } catch (e) {} };
-const fab = h('button', { class: 'fab', 'aria-label': 'Parole de l’heure', onclick: () => openBubble() }, h('span', null, '✨'));
+const fab = h('button', { class: 'fab', 'aria-label': 'Parole de Dieu du moment', onclick: () => openBubble() }, h('span', null, '✨'));
 const bubble = h('div', { class: 'bubble-back', hidden: true, onclick: e => { if (e.target === bubble) closeBubble(); } },
   h('div', { class: 'bubble', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'bubble-k' }));
 const bubbleOpen = () => !bubble.hidden;
 function fillBubble() {
-  const v = versetDeLheure(); if (!v) return;
-  const n = new Date(), next = (n.getHours() + 1) % 24;
+  const v = versetDuMoment(); if (!v) return;
+  const nx = nextSlot();
   bubble.firstChild.replaceChildren(
-    h('div', { class: 'kicker', id: 'bubble-k' }, `Parole de l’heure · ${pad(n.getHours())} h`),
+    h('div', { class: 'kicker', id: 'bubble-k' }, momentLabel()),
     h('blockquote', null, v.t),
     h('div', { class: 'ref' }, v.r, contextBtn(v.r, () => { bubble.hidden = true; })),
-    h('p', { class: 'muted small' }, `Gardez cette parole dans votre cœur : un nouveau verset vous attend à ${pad(next)} h.`),
+    h('p', { class: 'muted small' }, `Gardez cette parole dans votre cœur : un nouveau verset vous attend ${nx.demain ? 'demain ' : ''}à ${pad(nx.h)} h.`),
     h('button', { class: 'btn', onclick: closeBubble }, 'Amen'));
 }
 function openBubble() {
@@ -285,7 +304,7 @@ function openBubble() {
 function closeBubble() { bubble.hidden = true; fab.focus(); }
 function updateFab() { fab.classList.toggle('new', VU !== hourStamp()); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && bubbleOpen()) closeBubble(); });
-// Ouverture automatique : une fois par heure, au retour dans l'appli
+// Ouverture automatique : une fois par moment choisi (6 h, 12 h, 18 h par défaut), au retour dans l'appli
 function maybeAutoOpen() { if (S.start && VU !== hourStamp() && !bubbleOpen()) openBubble(); else updateFab(); }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') maybeAutoOpen(); });
 
@@ -757,7 +776,7 @@ function viewSettings() {
       h('button', { class: 'btn alt', onclick: () => { if (confirm('Effacer toute la progression et recommencer ?')) { S = norm(); save(); V.day = null; V.tab = 'today'; render(); } } }, 'Tout réinitialiser')),
     h('div', { class: 'card small muted' },
       h('p', null, 'Texte biblique : Louis Segond (1910), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
-      h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez « Un verset chaque heure », seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et votre plage d’heures sont conservés, et ils sont effacés dès que vous désactivez.'))
+      h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez les notifications, seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et les heures choisies sont conservés, et ils sont effacés dès que vous désactivez.'))
   ];
 }
 
@@ -865,7 +884,7 @@ function installCard() {
   return [h('div', { class: 'card' }, h('h2', null, 'Installer sur le téléphone'), ...body)];
 }
 
-/* ---------- Notifications : un verset chaque heure ---------- */
+/* ---------- Notifications : la parole de Dieu aux heures choisies ---------- */
 const PUSH_PRET = true; // false masque la carte des notifications
 const VAPID_PUBLIC = 'BGznV46AK-R3uZDIjAiCMBf3X_2aOv5CAx9nSAa0-ULbrH-bD7efKeq2lykVg6K5aaDvOV9Jprd-DjvgaquZkv8';
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -876,7 +895,7 @@ function b64ToBytes(s) {
 }
 async function sendSub(sub, method) {
   const r = await fetch('api/abonnement', { method, headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subscription: sub, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, from: S.pushFrom, to: S.pushTo }) });
+    body: JSON.stringify({ subscription: sub, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, hours: myHours() }) });
   if (!r.ok) throw new Error('serveur ' + r.status);
 }
 async function pushOn() {
@@ -891,25 +910,45 @@ async function pushOff() {
   pushSub = null;
 }
 function pushCard() {
-  if (!PUSH_PRET) return [];
-  S.pushFrom ??= 7; S.pushTo ??= 21;
-  const title = h('h2', null, 'Un verset chaque heure');
-  const intro = h('p', { class: 'muted small' }, 'Recevez une parole d’encouragement toutes les heures, même quand l’application est fermée : Dieu n’abandonne pas ses enfants.');
-  if (!pushSupported()) return [h('div', { class: 'card' }, title, intro, h('p', { class: 'small' }, 'Ce navigateur ne permet pas les notifications.'))];
-  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  if (ios && !(matchMedia('(display-mode: standalone)').matches || navigator.standalone))
-    return [h('div', { class: 'card' }, title, intro, h('p', { class: 'small' }, 'Sur iPhone, installez d’abord l’application sur l’écran d’accueil (voir ci-dessus), puis ouvrez-la depuis son icône pour activer les notifications.'))];
-  if (pushSub === undefined) navigator.serviceWorker.ready.then(r => r.pushManager.getSubscription()).then(s => { pushSub = s; if (V.tab === 'settings') render(); });
-  const hours = sel => h('select', { onchange: e => { S[sel] = +e.target.value; save(); if (pushSub) sendSub(pushSub, 'POST').catch(() => {}); } },
-    Array.from({ length: 24 }, (_, i) => h('option', { value: i, selected: S[sel] === i }, `${pad(i)} h`)));
-  const status = h('p', { class: 'small' });
-  const run = fn => async () => { status.textContent = 'Un instant…'; try { await fn(); status.textContent = ''; render(); } catch (e) { status.textContent = 'Échec : vérifiez votre connexion et réessayez.'; } };
-  return [h('div', { class: 'card' }, title, intro,
-    h('label', { class: 'f' }, 'Entre'), h('div', { class: 'hours' }, hours('pushFrom'), h('span', null, 'et'), hours('pushTo')),
-    pushSub ? h('p', { class: 'small ok-txt' }, '✓ Activé sur cet appareil') : null,
-    h('p', null, pushSub ? h('button', { class: 'btn alt', onclick: run(pushOff) }, 'Désactiver')
-      : h('button', { class: 'btn', onclick: run(pushOn) }, 'Activer les notifications')),
-    status)];
+  const title = h('h2', null, 'La parole de Dieu dans la journée');
+  const hs = myHours();
+  const intro = h('p', { class: 'muted small' }, 'Une parole d’encouragement à des moments choisis : Dieu n’abandonne pas ses enfants. Par défaut, 3 versets par jour, à 6 h, 12 h et 18 h. Vous pouvez en ajouter ou en enlever comme vous le souhaitez.');
+  const setHours = list => {
+    S.pushHours = [...new Set(list)].sort((a, b) => a - b); save();
+    if (pushSub) sendSub(pushSub, 'POST').catch(() => {});
+    const y = scrollY; render(); scrollTo(0, y); updateFab();
+  };
+  const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  const PRESETS = [
+    ['1 par jour', [6]],
+    ['3 par jour', HEURES_DEFAUT],
+    ['5 par jour', [6, 9, 12, 15, 18]],
+    ['Toutes les heures', Array.from({ length: 15 }, (_, i) => i + 7)]];
+  const presets = h('div', { class: 'presets' }, PRESETS.map(([nom, l]) =>
+    h('button', { class: 'cat-chip' + (same(hs, l) ? ' on' : ''), onclick: () => setHours(l) }, nom)));
+  const grid = h('div', { class: 'hour-grid', role: 'group', 'aria-label': 'Heures choisies' },
+    Array.from({ length: 24 }, (_, i) => h('button', {
+      class: 'hour-chip' + (hs.includes(i) ? ' on' : ''), 'aria-pressed': hs.includes(i) ? 'true' : 'false',
+      onclick: () => { if (hs.includes(i)) { if (hs.length > 1) setHours(hs.filter(x => x !== i)); } else setHours([...hs, i]); } }, `${pad(i)} h`)));
+  const resume = h('p', { class: 'small' }, h('b', null, `${hs.length} verset${hs.length > 1 ? 's' : ''} par jour`), ' : ', hs.map(x => `${pad(x)} h`).join(', '),
+    hs.length === 15 && hs[0] === 7 && hs[14] === 21 ? ' (de 7 h à 21 h)' : '');
+  const chooser = [intro, presets, h('details', { class: 'more-hours' }, h('summary', null, 'Choisir les heures une par une'), grid), resume];
+
+  let notif;
+  if (!PUSH_PRET || !pushSupported()) notif = [h('p', { class: 'small muted' }, 'Ce navigateur ne permet pas les notifications : le verset s’affiche dans l’application à ces moments-là.')];
+  else if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !(matchMedia('(display-mode: standalone)').matches || navigator.standalone))
+    notif = [h('p', { class: 'small' }, 'Pour recevoir les notifications sur iPhone, installez d’abord l’application sur l’écran d’accueil (voir ci-dessus), puis ouvrez-la depuis son icône.')];
+  else {
+    if (pushSub === undefined) navigator.serviceWorker.ready.then(r => r.pushManager.getSubscription()).then(s => { pushSub = s; if (V.tab === 'settings') { const y = scrollY; render(); scrollTo(0, y); } });
+    const status = h('p', { class: 'small' });
+    const run = fn => async () => { status.textContent = 'Un instant…'; try { await fn(); status.textContent = ''; render(); } catch (e) { status.textContent = 'Échec : vérifiez votre connexion et réessayez.'; } };
+    notif = [
+      pushSub ? h('p', { class: 'small ok-txt' }, '✓ Notifications activées sur cet appareil') : h('p', { class: 'small muted' }, 'Activez les notifications pour recevoir ces versets même quand l’application est fermée.'),
+      h('p', null, pushSub ? h('button', { class: 'btn alt', onclick: run(pushOff) }, 'Désactiver les notifications')
+        : h('button', { class: 'btn', onclick: run(pushOn) }, 'Activer les notifications')),
+      status];
+  }
+  return [h('div', { class: 'card' }, title, ...chooser, h('hr', { class: 'sep' }), ...notif)];
 }
 
 function downloadBlob(name, type, content) {

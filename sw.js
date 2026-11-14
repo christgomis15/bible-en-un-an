@@ -1,5 +1,5 @@
 // Service worker : fonctionnement hors ligne (stale-while-revalidate) + notifications
-const CACHE = 'bible-an-v14';
+const CACHE = 'bible-an-v15';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'data/lsg.js', 'data/plan.js', 'data/versets.js', 'icons/icon-192.png', 'icons/icon-512.png', 'fonts/jakarta.woff2', 'fonts/inter.woff2', 'fonts/cormorant.woff2', 'fonts/cormorant-italic.woff2'];
 
 self.addEventListener('install', e => {
@@ -32,8 +32,8 @@ function versetLocal() {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = {}; }
-  if (!d.body) { const v = versetLocal(); if (v) d = { title: `Parole de l’heure · ${v.r}`, body: v.t }; }
-  e.waitUntil(self.registration.showNotification(d.title || 'Parole de l’heure', {
+  if (!d.body) { const v = versetLocal(); if (v) d = { title: `Parole de Dieu · ${v.r}`, body: v.t }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Parole de Dieu', {
     body: d.body || 'Ouvrez l’application pour lire la parole de l’heure.',
     icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: 'parole-de-l-heure', renotify: true, lang: 'fr'
   }));

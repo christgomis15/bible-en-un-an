@@ -1,5 +1,5 @@
-// Envoie la « parole de l'heure » à chaque appareil abonné dont l'heure locale est dans sa plage.
-// Appelé toutes les heures (GitHub Actions). Un seul envoi par heure, même si l'adresse est appelée plusieurs fois.
+// Envoie la parole de Dieu à chaque appareil abonné, aux heures qu'il a choisies (6 h, 12 h et 18 h par défaut).
+// Appelé toutes les heures (cron Vercel). Un seul envoi par heure, même si l'adresse est appelée plusieurs fois.
 const webpush = require('web-push');
 const { put, del, list, head } = require('@vercel/blob');
 const VERSETS = require('./_versets.js');
@@ -15,7 +15,8 @@ function heureLocale(now, tz) {
   for (const x of new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', hourCycle: 'h23' }).formatToParts(now)) p[x.type] = +x.value;
   return p;
 }
-const dansPlage = (h, a, b) => (a <= b ? h >= a && h <= b : h >= a || h <= b);
+// Anciens abonnements (plage from/to) : on applique le nouveau défaut, 3 versets par jour
+const heuresDe = a => (Array.isArray(a.hours) && a.hours.length ? a.hours : [6, 12, 18]);
 
 async function tousLesAbonnements() {
   const out = []; let cursor;
@@ -46,9 +47,9 @@ module.exports = async (req, res) => {
       try {
         const a = await (await fetch(b.url + '?t=' + now.getTime())).json();
         const t = heureLocale(now, a.tz);
-        if (!dansPlage(t.hour, a.from, a.to)) return;
+        if (!heuresDe(a).includes(t.hour)) return;
         const v = verset(t.year, t.month, t.day, t.hour);
-        await webpush.sendNotification(a.subscription, JSON.stringify({ title: `Parole de l’heure · ${v.r}`, body: v.t }), { TTL: 3000 });
+        await webpush.sendNotification(a.subscription, JSON.stringify({ title: `Parole de Dieu · ${v.r}`, body: v.t }), { TTL: 3000 });
         envoyes++;
       } catch (e) {
         if (e.statusCode === 404 || e.statusCode === 410) { await del(b.url).catch(() => {}); supprimes++; }
