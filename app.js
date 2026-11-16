@@ -199,7 +199,20 @@ function semeurLinks(n) {
 
 /* ---------- Rendu ---------- */
 const view = $('#view');
+// Jour pour lequel la page a été dessinée : si l'appli reste ouverte (ou en arrière-plan) après minuit,
+// on la redessine pour afficher le bon jour.
+let renderedDay = '';
+function checkNewDay() {
+  if (!S.start || iso(today()) === renderedDay || V.sel.size) return;
+  if (V.tab === 'bible') { renderedDay = iso(today()); return; } // ne pas perdre la lecture en cours
+  if (V.tab === 'today') V.day = null;
+  render();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewDay(); });
+setInterval(checkNewDay, 60000);
+
 function render() {
+  renderedDay = iso(today());
   document.documentElement.style.setProperty('--read-size', S.font + 'px');
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === V.tab));
   view.replaceChildren();

@@ -222,7 +222,7 @@ body{background:var(--body-bg);font-family:var(--sans)}
 .top .sub{display:none}
 .card{border-radius:var(--radius);box-shadow:var(--shadow)}
 html[data-theme="jardin"] .card,html:not([data-theme]) .card{border-color:transparent}
-html[data-theme="veillee"] .card{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.09);box-shadow:none}
+html[data-theme="veillee"] .card{background:rgba(24,30,70,.9);border-color:rgba(255,255,255,.09);box-shadow:none;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .card h2,.passage{font-family:var(--display);font-weight:var(--display-weight);letter-spacing:-.01em}
 html[data-theme="veillee"] .card h2{font-size:1.35rem}
 html[data-theme="veillee"] .passage{font-size:1.75rem}
@@ -331,3 +331,6 @@ body{position:relative}
 .hour-chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:8px 0;font:inherit;font-size:.82rem;cursor:pointer;font-variant-numeric:tabular-nums}
 .hour-chip.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink);font-weight:700}
 html[data-theme="veillee"] .cat-chip{background:rgba(255,255,255,.06)}
+/* Veillée : cartes opaques au-dessus du décor, pour que les étoiles ne passent pas sur le texte */
+html[data-theme="veillee"] .card.hour-verse{background:var(--hero),#1b2250}
+html[data-theme="veillee"] details.week,html[data-theme="veillee"] .mini-stats div{background:rgba(24,30,70,.9)}
