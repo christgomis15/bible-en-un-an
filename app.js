@@ -222,6 +222,7 @@ function render() {
   view.append(...[].concat(fn()).filter(Boolean));
   window.scrollTo(0, 0);
   if (V.goto) { const sp = verseEl(V.goto); V.goto = null; if (sp) { sp.scrollIntoView({ block: 'center' }); sp.classList.add('flash'); } }
+  setupChapbar();
 }
 
 function welcome() {
@@ -426,6 +427,60 @@ function reading(n, st) {
   return out;
 }
 
+/* ---------- Rappel du chapitre en cours, en bas de l'écran ----------
+   Onglet Bible : le chapitre ouvert, avec chapitre précédent / suivant.
+   Lecture du jour : le chapitre qu'on est en train de lire (selon le défilement),
+   avec passage au chapitre précédent / suivant du passage du jour. */
+const cbPrev = h('button', { class: 'cb-btn', 'aria-label': 'Chapitre précédent', onclick: () => chapStep(-1) }, '‹');
+const cbNext = h('button', { class: 'cb-btn', 'aria-label': 'Chapitre suivant', onclick: () => chapStep(1) }, '›');
+const cbTitle = h('span', { class: 'cb-title' });
+const cbSub = h('span', { class: 'cb-sub' });
+const cbMid = h('button', { class: 'cb-mid', onclick: () => { if (chapCtx && chapCtx.kind === 'bible') { V.bv = 'books'; render(); } } }, cbTitle, cbSub);
+const chapbar = h('nav', { class: 'chapbar', hidden: true, 'aria-label': 'Chapitre en cours' }, cbPrev, cbMid, cbNext);
+document.body.append(chapbar);
+let chapCtx = null, chapIdx = 0, cbRaf = 0;
+function setupChapbar() {
+  chapCtx = null;
+  if (V.tab === 'bible' && V.bv === 'read') chapCtx = { kind: 'bible' };
+  else if (V.tab === 'today') {
+    const heads = [...view.querySelectorAll('.reader .ch-head')];
+    if (heads.length) chapCtx = { kind: 'plan', heads, reader: view.querySelector('.reader') };
+  }
+  updateChapbar();
+}
+function showChapbar(on) {
+  chapbar.hidden = !on; document.body.classList.toggle('has-chapbar', on);
+}
+function updateChapbar() {
+  if (!chapCtx) return showChapbar(false);
+  if (chapCtx.kind === 'bible') {
+    const { b, c } = S.pos;
+    cbTitle.textContent = `${BOOKS[b][0]} ${c}`;
+    cbSub.textContent = `chapitre ${c} sur ${LSG[b].length}`;
+    cbPrev.disabled = b === 0 && c === 1;
+    cbNext.disabled = b === BOOKS.length - 1 && c === LSG[b].length;
+    return showChapbar(true);
+  }
+  // Lecture du jour : visible seulement quand le texte est à l'écran
+  const vh = innerHeight, r = chapCtx.reader.getBoundingClientRect();
+  if (!chapCtx.reader.isConnected || r.top > vh * 0.6 || r.bottom < vh * 0.3) return showChapbar(false);
+  const hs = chapCtx.heads;
+  let i = 0; hs.forEach((el, k) => { if (el.getBoundingClientRect().top < vh * 0.35) i = k; });
+  chapIdx = i;
+  cbTitle.textContent = hs[i].textContent;
+  cbSub.textContent = hs.length > 1 ? `chapitre ${i + 1} sur ${hs.length} du jour` : 'lecture du jour';
+  cbPrev.disabled = i === 0; cbNext.disabled = i === hs.length - 1;
+  showChapbar(true);
+}
+function chapStep(d) {
+  if (!chapCtx) return;
+  if (chapCtx.kind === 'bible') return stepChapter(d);
+  const t = chapCtx.heads[chapIdx + d]; if (!t) return;
+  t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+addEventListener('scroll', () => { if (!cbRaf) cbRaf = requestAnimationFrame(() => { cbRaf = 0; if (chapCtx && chapCtx.kind === 'plan') updateChapbar(); }); }, { passive: true });
+addEventListener('resize', () => updateChapbar());
+
 function readerLSG(n) {
   const wrap = h('div', { class: 'card' },
     h('div', { class: 'tools' },
@@ -433,7 +488,7 @@ function readerLSG(n) {
       h('button', { 'aria-label': 'Agrandir la taille du texte', onclick: () => { S.font = Math.min(30, S.font + 1); save(); render(); } }, 'A+')));
   const reader = h('div', { class: 'reader' });
   for (const [b, c1, c2] of PLAN[n - 1].s)
-    for (let c = c1; c <= c2; c++) reader.append(h('h3', null, `${BOOKS[b][0]} ${c}`), chapterEl(b, c));
+    for (let c = c1; c <= c2; c++) reader.append(h('h3', { class: 'ch-head' }, `${BOOKS[b][0]} ${c}`), chapterEl(b, c));
   wrap.append(reader, h('p', { class: 'hint' }, 'Touchez un ou plusieurs versets, puis choisissez une couleur.'));
   return wrap;
 }
