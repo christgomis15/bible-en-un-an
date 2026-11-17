@@ -843,9 +843,21 @@ function viewSettings() {
       h('hr', { class: 'sep' }),
       h('button', { class: 'btn alt', onclick: () => { if (confirm('Effacer toute la progression et recommencer ?')) { S = norm(); save(); V.day = null; V.tab = 'today'; render(); } } }, 'Tout réinitialiser')),
     h('div', { class: 'card small muted' },
+      versionLine(),
       h('p', null, 'Texte biblique : Louis Segond (1910), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
       h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez les notifications, seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et les heures choisies sont conservés, et ils sont effacés dès que vous désactivez.'))
   ];
+}
+
+// Numéro de version installé (nom du cache hors ligne) et style affiché, pour comparer deux appareils
+function versionLine() {
+  const p = h('p', { class: 'version' }, 'Version : …');
+  const style = { jardin: 'Jardin', veillee: 'Veillée' }[document.documentElement.getAttribute('data-theme')] || '';
+  const choix = { auto: 'Automatique', jardin: 'Jardin', veillee: 'Veillée' }[S.theme || 'auto'];
+  const show = v => { p.textContent = `Version : ${v} · Apparence : ${choix}${choix !== style ? ` (${style} en ce moment)` : ''}`; };
+  if ('caches' in window) caches.keys().then(ks => { const k = ks.filter(x => x.startsWith('bible-an-v')).sort().pop(); show(k ? k.replace('bible-an-v', '') : '?'); }).catch(() => show('?'));
+  else show('?');
+  return p;
 }
 
 /* ---------- Apparence : style Jardin, Veillée ou automatique ---------- */

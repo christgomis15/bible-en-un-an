@@ -6,6 +6,8 @@
 <title>Bible en un an</title>
 <meta name="description" content="Lire et méditer toute la Bible en un an, du lundi au samedi (Louis Segond 1910).">
 <meta name="theme-color" content="#f2f5f1">
+<!-- Empêche les navigateurs (Samsung, Chrome) d’assombrir d’office le style clair : l’appli gère elle-même son style de nuit -->
+<meta name="color-scheme" content="only light">
 <script>/* Style choisi (Jardin / Veillée / automatique), posé avant l’affichage */
 try{var s=JSON.parse(localStorage.getItem("bible-an-v1"))||{},t=s.theme||"auto";if(t==="auto"){var hr=new Date().getHours();t=hr>=19||hr<7?"veillee":"jardin"}document.documentElement.setAttribute("data-theme",t);document.querySelector("meta[name=theme-color]").content=t==="veillee"?"#10163a":"#f2f5f1"}catch(e){}</script>
 <link rel="manifest" href="manifest.webmanifest">
