@@ -101,7 +101,7 @@ li{margin:3px 0}
     <li><b>Parole de Dieu</b> : un verset d’encouragement, renouvelé aux moments choisis (6 h, 12 h et 18 h par défaut).</li>
     <li><b>Lecture du jour</b> mise en avant, avec le passage, la durée, le thème et un grand bouton « Commencer la lecture » qui descend jusqu’au texte. Juste en dessous : les jours de lecture d’affilée et le nombre de versets surlignés.</li>
     <li><b>Le passage du jour</b> (par exemple « Genèse 39–41 »), avec la date et la durée de lecture. Les flèches ‹ › passent au jour précédent ou suivant. Un badge indique « aujourd’hui », « lu ✓ » ou « à rattraper ».</li>
-    <li><b>Le texte</b> en Louis Segond 1910, avec A− / A+ pour la taille des lettres. L’onglet « Bible du Semeur » renvoie vers BibleGateway et YouVersion, car ce texte est protégé par des droits d’auteur.</li>
+    <li><b>Le texte</b>, avec A− / A+ pour la taille des lettres. Trois boutons au-dessus : <b>Segond</b> (Louis Segond 1910), <b>Darby</b> (1885) et <b>Semeur</b>. Ce dernier renvoie vers BibleGateway et YouVersion, car la Bible du Semeur est protégée par des droits d’auteur.</li>
     <li><b>Le rappel du chapitre en cours</b> : pendant la lecture, une barre en bas de l’écran indique le chapitre lu (par exemple « Genèse 17 · chapitre 3 sur 4 du jour »). Les boutons ‹ › amènent au chapitre précédent ou suivant du passage.</li>
     <li><b>La méditation</b> en six étapes : Lire, Observer, Méditer, Retenir, Appliquer, Prier. Les questions changent chaque jour.</li>
     <li><b>« J’ai terminé la lecture du jour »</b> pour marquer la journée comme lue.</li>
@@ -122,7 +122,17 @@ li{margin:3px 0}
 <section id="bible">
   <div class="kicker">Onglet 2</div>
   <h2>Bible</h2>
-  <p>Au-delà du programme, l’onglet Bible permet de consulter toute la Parole de Dieu (Louis Segond 1910), à tout moment et sans connexion.</p>
+  <p>Au-delà du programme, l’onglet Bible permet de consulter toute la Parole de Dieu, à tout moment et sans connexion.</p>
+  <h3>Deux versions</h3>
+  <ul>
+    <li><b>Louis Segond 1910</b> : la version de départ, toujours disponible.</li>
+    <li><b>Darby 1885</b> : une traduction très fidèle au texte original, appréciée pour l’étude. Les mots ajoutés pour la clarté sont entre crochets [ ], et les titres des psaumes s’affichent en italique au-dessus du texte.</li>
+    <li>On passe de l’une à l’autre avec les boutons <b>Segond / Darby</b>, dans l’onglet Bible comme dans la lecture du jour. L’appli retient la version choisie.</li>
+    <li>La Darby se télécharge la première fois qu’on la choisit (« Chargement… »), puis reste sur l’appareil et fonctionne sans connexion.</li>
+    <li>Les deux versions suivent la même numérotation des versets : un verset surligné l’est dans les deux versions. Dans quelques livres (psaumes, Joël, Malachie…), la Darby numérote autrement ; l’appli l’a alignée sur la Segond.</li>
+    <li>Trois versets absents des manuscrits suivis par Darby (Matthieu 23:14, Actes 8:37 et 15:34) sont signalés comme tels.</li>
+    <li>La recherche se fait dans la version affichée, et le bouton « Copier » indique la version du texte copié.</li>
+  </ul>
   <h3>Lire un chapitre</h3>
   <ul>
     <li>Toucher le titre (par exemple « Jean 3 ▾ ») ouvre la liste des 66 livres, Ancien et Nouveau Testament, puis la grille des chapitres.</li>
@@ -209,13 +219,15 @@ li{margin:3px 0}
   <h2>Où sont les données ?</h2>
   <p>La progression, les versets surlignés et les réglages restent <b>uniquement sur l’appareil</b>. Rien n’est envoyé. C’est pourquoi l’export est utile pour changer de téléphone.</p>
   <p>Seule exception : quand les notifications sont activées, le serveur garde l’adresse technique de notification du navigateur, le fuseau horaire et les heures choisies. Ces informations sont effacées dès qu’on désactive les notifications.</p>
-  <p class="note">Texte biblique : Louis Segond 1910, domaine public. La Bible du Semeur (© Biblica) n’est pas incluse.</p>
+  <p class="note">Textes bibliques : Louis Segond 1910 et Darby 1885, domaine public. La Bible du Semeur (© Biblica) n’est pas incluse.</p>
 </section>
 
 <section id="journal" class="plain">
   <div class="kicker">Historique</div>
   <h2>Journal des évolutions</h2>
   <ul class="log">
+    <li><time datetime="2026-11-17">17 nov. 2026</time><div><b>Version Darby.</b> Deuxième version de la Bible, à choisir avec les boutons Segond / Darby. Elle se télécharge à la demande et fonctionne ensuite sans connexion ; les surlignages restent valables dans les deux versions.</div></li>
+    <li><time datetime="2026-11-17">17 nov. 2026</time><div><b>Affichage sur tablette Samsung.</b> L’appli demande au navigateur de ne plus assombrir d’office le style Jardin. Le numéro de version et l’apparence en cours s’affichent en bas des Réglages.</div></li>
     <li><time datetime="2026-11-17">17 nov. 2026</time><div><b>Rappel du chapitre en cours</b> en bas de l’écran, dans l’onglet Bible et dans la lecture du jour, avec chapitre précédent et suivant.</div></li>
     <li><time datetime="2026-11-16">16 nov. 2026</time><div><b>Corrections.</b> Une appli restée ouverte en arrière-plan affiche désormais le bon jour après minuit (elle restait sur le dimanche). En Veillée, les étoiles du décor ne passent plus à travers les cartes.</div></li>
     <li><time datetime="2026-11-14">14 nov. 2026</time><div><b>Moins de notifications, plus de choix.</b> La parole de Dieu passe à 3 versets par jour par défaut (6 h, 12 h, 18 h) au lieu de chaque heure. Chacun peut en choisir plus ou moins, et ses propres heures. Les abonnés existants passent automatiquement à 3 par jour.</div></li>
@@ -235,6 +247,7 @@ li{margin:3px 0}
   <dl class="tech">
     <dt>Hébergement</dt><dd>Vercel, relié au dépôt GitHub « bible-en-un-an » : chaque modification envoyée sur GitHub met le site à jour automatiquement.</dd>
     <dt>Mise à jour des téléphones</dt><dd>L’appli garde une copie pour le hors-ligne ; elle prend la nouvelle version après avoir été fermée puis rouverte (parfois deux fois).</dd>
+    <dt>Versions de la Bible</dt><dd>Le texte Darby vient de getBible (domaine public). Un script l’a réaligné sur la numérotation de la Segond, puis vérifié verset par verset (longueurs comparées). Il est gardé à part dans le téléphone et n’est pas retéléchargé à chaque mise à jour de l’appli.</dd>
     <dt>Notifications</dt><dd>Une tâche planifiée Vercel passe chaque heure et n’envoie le verset qu’aux appareils qui ont choisi cette heure-là. Les abonnements (avec leurs heures) sont stockés dans Vercel Blob.</dd>
   </dl>
 </section>

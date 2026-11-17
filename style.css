@@ -352,3 +352,8 @@ body.has-chapbar{padding-bottom:calc(140px + env(safe-area-inset-bottom))}
 body.has-chapbar .fab{bottom:calc(128px + env(safe-area-inset-bottom))}
 body.selecting .chapbar{display:none}
 .reader .ch-head{scroll-margin-top:14px}
+
+/* Versions de la Bible */
+.ps-title{font-style:italic;color:var(--muted);font-size:.86em;margin:0 0 .4em}
+.vs.absent{font-style:italic;color:var(--muted)}
+.card > .seg:first-child{margin-top:0}

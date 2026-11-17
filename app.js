@@ -1,5 +1,5 @@
 /* Bible en un an — lecture et méditation, du lundi au samedi.
-   Texte : Louis Segond 1910 (domaine public). Aucune donnée n'est envoyée nulle part :
+   Textes : Louis Segond 1910 et Darby 1885 (domaine public). Aucune donnée n'est envoyée nulle part :
    la progression est enregistrée sur cet appareil (localStorage). */
 (() => {
 'use strict';
@@ -109,6 +109,42 @@ function h(tag, attrs, ...kids) {
 
 /* ---------- État ---------- */
 let LSG = null, PLAN = null, TOTAL_CHARS = 0;
+/* ---------- Versions de la Bible ----------
+   Même découpage en versets pour toutes les versions (celui de la Segond) :
+   les surlignages restent donc valables quelle que soit la version choisie. */
+const VERSIONS = {
+  lsg: { nom: 'Louis Segond', court: 'Segond' },
+  darby: { nom: 'Darby', court: 'Darby', src: 'data/darby.js', glob: 'BIBLE_DARBY', titres: 'BIBLE_DARBY_TITRES' }
+};
+const TEXTS = {}, TITRES = {}, loading = {};
+const ver = () => TEXTS[S.version] ? S.version : 'lsg';
+const BIB = () => TEXTS[ver()];
+const verseTxt = (b, c, v) => BIB()[b][c - 1][v - 1] || LSG[b][c - 1][v - 1] + ' (Segond)'; // 3 versets absents de la Darby
+function loadVersion(id) {
+  if (TEXTS[id]) return Promise.resolve();
+  return loading[id] || (loading[id] = new Promise((ok, ko) => {
+    const sc = document.createElement('script'); sc.src = VERSIONS[id].src;
+    sc.onload = () => { TEXTS[id] = window[VERSIONS[id].glob]; TITRES[id] = window[VERSIONS[id].titres] || {}; TEXTS[id] ? ok() : ko(); };
+    sc.onerror = () => { delete loading[id]; sc.remove(); ko(); };
+    document.head.append(sc);
+  }));
+}
+function rerender() { const y = scrollY; render(); scrollTo(0, y); }
+function setVersion(id) {
+  V.ver = 'txt'; S.version = id; save(); FOLDED = null;
+  if (TEXTS[id]) return rerender();
+  V.loadingVer = id; rerender();
+  loadVersion(id).then(() => { V.loadingVer = null; FOLDED = null; rerender(); },
+    () => { V.loadingVer = null; S.version = 'lsg'; save(); rerender(); alert('Impossible de charger la version Darby. Vérifiez votre connexion internet, puis réessayez.'); });
+}
+// Boutons de choix de la version (avec, dans la lecture du jour, le lien vers la Bible du Semeur)
+function versionSeg(semeur) {
+  const btns = Object.keys(VERSIONS).map(id => h('button', {
+    class: V.ver !== 'bds' && (V.loadingVer || ver()) === id ? 'on' : '', onclick: () => setVersion(id) },
+    V.loadingVer === id ? 'Chargement…' : VERSIONS[id].court));
+  if (semeur) btns.push(h('button', { class: V.ver === 'bds' ? 'on' : '', onclick: () => { V.ver = 'bds'; render(); } }, 'Semeur'));
+  return h('div', { class: 'seg', role: 'tablist', 'aria-label': 'Version de la Bible' }, btns);
+}
 // Couleurs de surlignage : chacun peut donner (ou non) un nom à chaque couleur pour s'organiser
 const COULEURS = ['#f5c518', '#f08c00', '#e5484d', '#e93d82', '#8e4ec6', '#3e7bfa', '#00b4d8', '#12a594', '#30a46c', '#94c11f', '#a0522d', '#7a869a'];
 const CATS_DEFAUT = () => COULEURS.map((c, i) => ({ id: 'c' + i, n: '', c }));
@@ -130,7 +166,7 @@ function migreCats(s) {
   s.cats = neuf;
 }
 let S = load();
-const V = { tab: 'today', day: null, ver: 'lsg', sel: new Set(), bv: 'read', bb: null, q: '', qMax: 100, goto: null };
+const V = { tab: 'today', day: null, ver: 'txt', loadingVer: null, sel: new Set(), bv: 'read', bb: null, q: '', qMax: 100, goto: null };
 
 function norm(s) {
   s = Object.assign({ start: null, done: {}, font: 19, remind: '06:30' }, s || {});
@@ -146,6 +182,7 @@ function norm(s) {
   delete s.verses; delete s.vc;
   if (!Array.isArray(s.pushHours) || !s.pushHours.length) s.pushHours = [6, 12, 18];
   delete s.pushFrom; delete s.pushTo;
+  if (!(s.version in VERSIONS)) s.version = 'lsg';
   if (!s.pos) s.pos = { b: 42, c: 1 }; // dernier chapitre ouvert dans l'onglet Bible (Jean 1)
   return s;
 }
@@ -400,11 +437,9 @@ function reading(n, st) {
       h('div', { class: 'meta' }, `${cap(fmtLong(date))} · ≈ ${minutes(n)} min`)),
     h('button', { class: 'nav', 'aria-label': 'Jour suivant', disabled: n >= PLAN.length, onclick: () => { V.day = n + 1; render(); } }, '›'));
 
-  const seg = h('div', { class: 'seg', role: 'tablist' },
-    h('button', { class: V.ver === 'lsg' ? 'on' : '', onclick: () => { V.ver = 'lsg'; render(); } }, 'Louis Segond'),
-    h('button', { class: V.ver === 'bds' ? 'on' : '', onclick: () => { V.ver = 'bds'; render(); } }, 'Bible du Semeur'));
+  const seg = versionSeg(true);
 
-  const body = V.ver === 'lsg' ? readerLSG(n) : readerSemeur(n);
+  const body = V.ver === 'bds' ? readerSemeur(n) : readerLSG(n);
 
   const med = h('div', { class: 'card' },
     h('div', { class: 'kicker' }, `Méditation · ${theme.t}`),
@@ -496,13 +531,15 @@ function readerLSG(n) {
 // Texte d'un chapitre, versets touchables pour les surligner
 function chapterEl(b, c) {
   const p = h('p', { class: BLOCK_BOOKS.has(b) ? 'blocks' : '' });
-  LSG[b][c - 1].forEach((txt, i) => {
+  const titre = (TITRES[ver()] || {})[`${b}.${c}`]; // titres des psaumes (Darby)
+  BIB()[b][c - 1].forEach((txt, i) => {
     const key = `${b}.${c}.${i + 1}`;
-    const sp = h('span', { class: 'vs', 'data-k': key, onclick: () => toggleSel(key) }, h('sup', null, i + 1), txt + ' ');
+    const sp = h('span', { class: 'vs' + (txt ? '' : ' absent'), 'data-k': key, onclick: () => toggleSel(key) }, h('sup', null, i + 1), (txt || 'Ce verset ne figure pas dans cette traduction.') + ' ');
     paintVerse(sp, !!S.hl[key]);
     p.append(sp);
   });
-  return p;
+  if (!titre) return p;
+  const f = document.createDocumentFragment(); f.append(h('p', { class: 'ps-title' }, titre), p); return f;
 }
 
 function readerSemeur(n) {
@@ -514,7 +551,7 @@ function readerSemeur(n) {
     h('a', { class: 'btn block', href: l.gw, target: '_blank', rel: 'noopener' }, 'Ouvrir tout le passage (BibleGateway)'),
     h('p', { class: 'muted small' }, 'Ou chapitre par chapitre sur YouVersion :'),
     h('div', { class: 'chips' }, l.yv.map(x => h('a', { class: 'chip', href: x.u, target: '_blank', rel: 'noopener' }, x.t))),
-    h('p', { class: 'muted small' }, 'Astuce : lisez d’abord dans la Bible du Semeur, puis revenez dans « Louis Segond » pour comparer et surligner votre verset.'));
+    h('p', { class: 'muted small' }, 'Astuce : lisez d’abord dans la Bible du Semeur, puis revenez dans « Segond » ou « Darby » pour comparer et surligner votre verset.'));
 }
 
 /* ---------- Sélection et surlignage en couleurs ---------- */
@@ -550,7 +587,7 @@ function finishSel() {
   keys.forEach(k => { const sp = verseEl(k); if (sp) paintVerse(sp, isKept(k)); });
   updateSelBar();
 }
-function refOf(key) { const [b, c, v] = key.split('.').map(Number); return { b, c, v, txt: LSG[b][c - 1][v - 1] }; }
+function refOf(key) { const [b, c, v] = key.split('.').map(Number); return { b, c, v, txt: verseTxt(b, c, v) }; }
 // « Psaumes 44:3-5, 8 » : versets regroupés par chapitre, suites de versets abrégées
 function refLabel(ks) {
   const groups = [];
@@ -567,7 +604,7 @@ function refLabel(ks) {
 }
 function copySel() {
   const ks = selOrdered(); if (!ks.length) return;
-  const txt = `« ${ks.map(k => refOf(k).txt).join(' ')} » (${refLabel(ks)}, Louis Segond)`;
+  const txt = `« ${ks.map(k => refOf(k).txt).join(' ')} » (${refLabel(ks)}, ${VERSIONS[ver()].nom})`;
   const done = () => { copyBtn.textContent = 'Copié ✓'; setTimeout(() => { copyBtn.textContent = 'Copier'; }, 1500); };
   if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done, () => prompt('Copiez le texte :', txt));
   else prompt('Copiez le texte :', txt);
@@ -621,7 +658,7 @@ function savedVerse(key) {
   const cat = catOf(key);
   return h('div', { class: 'verse-saved', 'data-cat': cat.id, style: `border-left-color:${cat.c}` },
     h('div', { class: 'ref' }, h('button', { class: 'ref-link', onclick: () => openBible(b, c, v) }, `${BOOKS[b][0]} ${c}:${v} ›`), cat.n ? h('span', { class: 'cat-tag', style: `background:${fond(cat.c)}` }, cat.n) : null),
-    h('p', null, LSG[b][c - 1][v - 1]));
+    h('p', null, verseTxt(b, c, v)));
 }
 
 /* ---------- Bible : consulter librement toute la Parole ---------- */
@@ -686,6 +723,7 @@ function chapterView() {
       h('div', { class: 'meta' }, `${b < 39 ? 'Ancien' : 'Nouveau'} Testament · chapitre ${c} sur ${LSG[b].length}`)),
     h('button', { class: 'nav', 'aria-label': 'Chapitre suivant', disabled: last, onclick: () => stepChapter(1) }, '›'));
   const card = h('div', { class: 'card' },
+    versionSeg(false),
     h('div', { class: 'tools' },
       h('button', { 'aria-label': 'Réduire la taille du texte', onclick: () => setFont(-1) }, 'A−'),
       h('button', { 'aria-label': 'Agrandir la taille du texte', onclick: () => setFont(1) }, 'A+')),
@@ -712,10 +750,10 @@ function chapterPicker(b) {
     h('div', { class: 'picker-head' }, h('button', { class: 'sel-link', onclick: () => { V.bv = 'books'; render(); } }, '‹ Livres'), h('h2', null, BOOKS[b][0]), h('span')),
     h('div', { class: 'chap-grid' }, LSG[b].map((_, i) => h('button', { class: 'chap' + (b === S.pos.b && i + 1 === S.pos.c ? ' on' : ''), onclick: () => openBible(b, i + 1) }, i + 1))));
 }
-let FOLDED = null; // texte de toute la Bible sans accents, préparé à la première recherche
+let FOLDED = null; // texte de toute la Bible (version choisie) sans accents, préparé à la première recherche
 function searchResults(q) {
   const fq = fold(q).replace(/\s+/g, ' ');
-  if (!FOLDED) FOLDED = LSG.map(book => book.map(ch => ch.map(fold)));
+  if (!FOLDED) FOLDED = BIB().map(book => book.map(ch => ch.map(fold)));
   const hits = []; let total = 0, nt = 0;
   FOLDED.forEach((book, b) => book.forEach((ch, c) => ch.forEach((t, v) => {
     const i = t.indexOf(fq); if (i < 0) return;
@@ -726,7 +764,7 @@ function searchResults(q) {
   if (!total) return h('div', { class: 'card' }, back, h('h2', null, `Aucun verset ne contient « ${q} »`),
     h('p', { class: 'muted small' }, 'Essayez un mot plus court ou une autre forme du mot (« aimer », « aime », « amour »), ou une référence comme « Psaumes 23 ».'));
   const list = hits.map(x => {
-    const txt = LSG[x.b][x.c - 1][x.v - 1];
+    const txt = BIB()[x.b][x.c - 1][x.v - 1];
     return h('button', { class: 'hit', onclick: () => { V.q = q; openBible(x.b, x.c, x.v); } },
       h('div', { class: 'ref' }, `${BOOKS[x.b][0]} ${x.c}:${x.v}`),
       h('p', null, txt.slice(0, x.i), h('mark', null, txt.slice(x.i, x.i + fq.length)), txt.slice(x.i + fq.length)));
@@ -734,7 +772,7 @@ function searchResults(q) {
   const fr = n => n.toLocaleString('fr-FR');
   return h('div', { class: 'card' }, back,
     h('h2', null, `${fr(total)} verset${total > 1 ? 's' : ''} avec « ${q} »`),
-    h('p', { class: 'muted small' }, `${fr(total - nt)} dans l’Ancien Testament, ${fr(nt)} dans le Nouveau. Touchez un verset pour l’ouvrir dans son chapitre.`),
+    h('p', { class: 'muted small' }, `Version ${VERSIONS[ver()].nom} · ${fr(total - nt)} dans l’Ancien Testament, ${fr(nt)} dans le Nouveau. Touchez un verset pour l’ouvrir dans son chapitre.`),
     list,
     total > hits.length ? h('button', { class: 'btn alt block', onclick: () => { V.qMax += 100; const y = scrollY; render(); scrollTo(0, y); } }, `Afficher plus (${fr(hits.length)} sur ${fr(total)})`) : null);
 }
@@ -844,7 +882,7 @@ function viewSettings() {
       h('button', { class: 'btn alt', onclick: () => { if (confirm('Effacer toute la progression et recommencer ?')) { S = norm(); save(); V.day = null; V.tab = 'today'; render(); } } }, 'Tout réinitialiser')),
     h('div', { class: 'card small muted' },
       versionLine(),
-      h('p', null, 'Texte biblique : Louis Segond (1910), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
+      h('p', null, 'Textes bibliques : Louis Segond (1910) et Darby (1885), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
       h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez les notifications, seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et les heures choisies sont conservés, et ils sont effacés dès que vous désactivez.'))
   ];
 }
@@ -1070,7 +1108,8 @@ applyTheme();
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => { V.tab = b.dataset.tab; if (V.tab === 'today') V.day = null; if (V.tab === 'bible') V.bv = 'read'; render(); }));
 
 if (window.BIBLE_LSG && window.BIBLE_PLAN) {
-  LSG = window.BIBLE_LSG; PLAN = window.BIBLE_PLAN; TOTAL_CHARS = PLAN.reduce((a, d) => a + d.n, 0); render();
+  LSG = TEXTS.lsg = window.BIBLE_LSG; PLAN = window.BIBLE_PLAN; TOTAL_CHARS = PLAN.reduce((a, d) => a + d.n, 0); render();
+  if (S.version !== 'lsg') loadVersion(S.version).then(() => { FOLDED = null; rerender(); }, () => {});
   if (window.VERSETS && VERSETS.length) {
     document.body.append(fab, bubble); scheduleHourRefresh();
     const fromNotif = new URLSearchParams(location.search).has('verset');
