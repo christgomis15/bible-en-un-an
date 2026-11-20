@@ -1,5 +1,5 @@
 /* Bible en un an — lecture et méditation, du lundi au samedi.
-   Textes : Louis Segond 1910 et Darby 1885 (domaine public). Aucune donnée n'est envoyée nulle part :
+   Textes : Louis Segond 1910 et Darby 1885 (domaine public). Jeux : quiz et versets à compléter. Aucune donnée n'est envoyée nulle part :
    la progression est enregistrée sur cet appareil (localStorage). */
 (() => {
 'use strict';
@@ -166,7 +166,7 @@ function migreCats(s) {
   s.cats = neuf;
 }
 let S = load();
-const V = { tab: 'today', day: null, ver: 'txt', loadingVer: null, sel: new Set(), bv: 'read', bb: null, q: '', qMax: 100, goto: null };
+const V = { g: null, tab: 'today', day: null, ver: 'txt', loadingVer: null, sel: new Set(), bv: 'read', bb: null, q: '', qMax: 100, goto: null };
 
 function norm(s) {
   s = Object.assign({ start: null, done: {}, font: 19, remind: '06:30' }, s || {});
@@ -183,6 +183,8 @@ function norm(s) {
   if (!Array.isArray(s.pushHours) || !s.pushHours.length) s.pushHours = [6, 12, 18];
   delete s.pushFrom; delete s.pushTo;
   if (!(s.version in VERSIONS)) s.version = 'lsg';
+  s.jeux = Object.assign({ qp: 'tout', src: 'connus', niv: 'facile' }, s.jeux);
+  for (const g of ['qcm', 'trous']) s.jeux[g] = Object.assign({ n: 0, best: 0 }, s.jeux[g]);
   if (!s.pos) s.pos = { b: 42, c: 1 }; // dernier chapitre ouvert dans l'onglet Bible (Jean 1)
   return s;
 }
@@ -241,7 +243,7 @@ const view = $('#view');
 let renderedDay = '';
 function checkNewDay() {
   if (!S.start || iso(today()) === renderedDay || V.sel.size) return;
-  if (V.tab === 'bible') { renderedDay = iso(today()); return; } // ne pas perdre la lecture en cours
+  if (V.tab === 'bible' || V.tab === 'games') { renderedDay = iso(today()); return; } // ne pas perdre la lecture ou la partie en cours
   if (V.tab === 'today') V.day = null;
   render();
 }
@@ -254,8 +256,8 @@ function render() {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === V.tab));
   view.replaceChildren();
   clearSel();
-  if (!S.start && V.tab !== 'bible') { view.append(welcome()); return; }
-  const fn = { today: viewToday, bible: viewBible, plan: viewPlan, progress: viewProgress, settings: viewSettings }[V.tab];
+  if (!S.start && V.tab !== 'bible' && V.tab !== 'games') { view.append(welcome()); return; }
+  const fn = { today: viewToday, bible: viewBible, games: viewGames, plan: viewPlan, progress: viewProgress, settings: viewSettings }[V.tab];
   view.append(...[].concat(fn()).filter(Boolean));
   window.scrollTo(0, 0);
   if (V.goto) { const sp = verseEl(V.goto); V.goto = null; if (sp) { sp.scrollIntoView({ block: 'center' }); sp.classList.add('flash'); } }
@@ -775,6 +777,227 @@ function searchResults(q) {
     h('p', { class: 'muted small' }, `Version ${VERSIONS[ver()].nom} · ${fr(total - nt)} dans l’Ancien Testament, ${fr(nt)} dans le Nouveau. Touchez un verset pour l’ouvrir dans son chapitre.`),
     list,
     total > hits.length ? h('button', { class: 'btn alt block', onclick: () => { V.qMax += 100; const y = scrollY; render(); scrollTo(0, y); } }, `Afficher plus (${fr(hits.length)} sur ${fr(total)})`) : null);
+}
+
+/* ---------- Jeux : connaître la Bible et retenir la Parole ----------
+   Quiz : 10 questions à choix multiples (data/quiz.js), avec la référence de chaque réponse.
+   Versets à compléter : mots manquants à remettre en place, en touchant un mot ou en le faisant glisser. */
+const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const NB_QUIZ = 10, NB_TROUS = 5;
+const NIVEAUX = { facile: { nom: 'Facile', trous: 1, leurres: 2 }, moyen: { nom: 'Moyen', trous: 2, leurres: 3 }, difficile: { nom: 'Difficile', trous: 3, leurres: 4 } };
+// Petits mots qu'on ne fait pas deviner
+const MOTS_VIDES = new Set('avec dans pour mais donc sont nous vous leur leurs cette celui celle celles ceux cela ceci elle elles comme point tout tous toute toutes plus sans sous vers chez aussi ainsi alors soit sera seront etait etaient avait avaient quand dont encore meme votre notre afin parce entre jusqu lorsque puis contre selon avant apres depuis ayant etant aura auront avez avons etes suis fais fait voici voila quelque quiconque jamais peut doit lequel laquelle lesquels lesquelles dire disant'
+  .split(' '));
+const foldW = w => fold(w).replace(/[^a-z]/g, '');
+function gameScoreLine(g) {
+  const st = S.jeux[g];
+  return st.n ? `Meilleur score : ${st.best} sur ${g === 'qcm' ? NB_QUIZ : NB_TROUS} · ${st.n} partie${st.n > 1 ? 's' : ''} jouée${st.n > 1 ? 's' : ''}` : 'Pas encore de partie jouée.';
+}
+function endGame(g, score) {
+  const st = S.jeux[g]; st.n++; const record = score > st.best; if (record) st.best = score; save(); return record;
+}
+function segOf(opts, cur, set) {
+  return h('div', { class: 'seg' }, opts.map(([id, nom, dis]) => h('button', { class: cur === id ? 'on' : '', disabled: !!dis, onclick: () => { set(id); save(); rerender(); } }, nom)));
+}
+function viewGames() {
+  if (V.g && V.g.type === 'qcm') return quizView();
+  if (V.g && V.g.type === 'trous') return gapView();
+  const mine = myGapVerses().length;
+  if (S.jeux.src === 'miens' && !mine) S.jeux.src = 'connus';
+  return [
+    h('div', { class: 'card' }, h('h2', null, 'Jeux'), h('p', { class: 'muted small' }, 'Pour mieux connaître la Bible et garder la Parole de Dieu dans son cœur.')),
+    h('div', { class: 'card game-card' },
+      h('div', { class: 'kicker' }, 'Quiz biblique'),
+      h('h2', null, 'Questions à choix multiples'),
+      h('p', { class: 'small' }, `${NB_QUIZ} questions tirées au hasard. Après chaque réponse, la référence permet de lire le passage.`),
+      segOf([['tout', 'Toute la Bible'], ['at', 'Ancien T.'], ['nt', 'Nouveau T.']], S.jeux.qp, v => { S.jeux.qp = v; }),
+      h('p', { class: 'muted small' }, gameScoreLine('qcm')),
+      h('button', { class: 'btn block', onclick: startQuiz }, 'Jouer')),
+    h('div', { class: 'card game-card' },
+      h('div', { class: 'kicker' }, 'Versets à compléter'),
+      h('h2', null, 'Retrouver les mots manquants'),
+      h('p', { class: 'small' }, `${NB_TROUS} versets. Touchez un mot pour le placer dans la case vide, ou faites-le glisser.`),
+      h('p', { class: 'f small' }, 'Quels versets ?'),
+      segOf([['connus', 'Versets d’encouragement'], ['miens', `Mes versets surlignés (${mine})`, !mine]], S.jeux.src, v => { S.jeux.src = v; }),
+      mine ? null : h('p', { class: 'muted small' }, 'Surlignez des versets pendant vos lectures : vous pourrez ensuite vous entraîner à les retenir.'),
+      h('p', { class: 'f small' }, 'Niveau'),
+      segOf(Object.entries(NIVEAUX).map(([id, n]) => [id, n.nom]), S.jeux.niv, v => { S.jeux.niv = v; }),
+      h('p', { class: 'muted small' }, gameScoreLine('trous')),
+      h('button', { class: 'btn block', onclick: startGap }, 'Jouer'))
+  ];
+}
+function gameTop(label, i, n, score) {
+  return h('div', { class: 'card game-top' },
+    h('div', { class: 'gt-row' },
+      h('span', { class: 'gt-label' }, label, h('b', null, ` ${Math.min(i + 1, n)} / ${n}`)),
+      h('span', { class: 'gt-score' }, `Score : ${score}`),
+      h('button', { class: 'sel-link', onclick: () => { if (V.g.done || confirm('Quitter la partie en cours ?')) { V.g = null; render(); } } }, 'Quitter')),
+    h('div', { class: 'gt-bar' }, h('span', { style: `width:${Math.round(100 * Math.min(i, n) / n)}%` })));
+}
+function resultCard(g, score, n, record, again, extra) {
+  const ratio = score / n;
+  const msg = ratio === 1 ? 'Parfait ! Quelle connaissance de la Parole !' : ratio >= .7 ? 'Très bien ! Continuez ainsi.' : ratio >= .4 ? 'Bien joué ! Chaque partie fait grandir.' : 'Courage ! On apprend en jouant : rejouez quand vous voulez.';
+  return [h('div', { class: 'card center' },
+    h('div', { class: 'kicker' }, 'Résultat'),
+    h('div', { class: 'score-big' }, `${score} / ${n}`),
+    h('p', null, msg),
+    record ? h('p', { class: 'ok-txt' }, 'Nouveau meilleur score !') : null,
+    h('p', null, h('button', { class: 'btn', onclick: again }, 'Rejouer'), h('button', { class: 'btn alt', onclick: () => { V.g = null; render(); } }, 'Retour aux jeux'))),
+    extra];
+}
+
+/* --- Quiz --- */
+function startQuiz() {
+  const pool = (window.QUIZ || []).filter(x => { const p = parseRef(x.ref); const nt = p && p.b >= 39; return S.jeux.qp === 'tout' || (S.jeux.qp === 'nt') === nt; });
+  V.g = { type: 'qcm', qs: shuffle(pool).slice(0, NB_QUIZ).map(x => ({ ...x, opts: shuffle(x.r) })), i: 0, score: 0, pick: null, missed: [] };
+  render();
+}
+function quizView() {
+  const g = V.g, n = g.qs.length;
+  if (g.done) return [gameTop('Question', n, n, g.score), ...resultCard('qcm', g.score, n, g.record, startQuiz,
+    g.missed.length ? h('div', { class: 'card' }, h('div', { class: 'kicker' }, 'À revoir'),
+      g.missed.map(x => h('div', { class: 'review' }, h('p', { class: 'small' }, x.q), h('p', null, h('b', null, x.r[0]), ' — ', x.ref), contextBtn(x.ref)))) : null)];
+  const x = g.qs[g.i], answered = g.pick != null;
+  const next = () => {
+    if (g.i + 1 < n) { g.i++; g.pick = null; render(); }
+    else { g.done = true; g.record = endGame('qcm', g.score); render(); }
+  };
+  return [gameTop('Question', g.i, n, g.score),
+    h('div', { class: 'card' },
+      h('h2', { class: 'quiz-q' }, x.q),
+      h('div', { class: 'opts' }, x.opts.map(o => h('button', {
+        class: 'opt' + (answered && o === x.r[0] ? ' ok' : '') + (answered && o === g.pick && o !== x.r[0] ? ' ko' : ''),
+        disabled: answered,
+        onclick: () => { g.pick = o; if (o === x.r[0]) g.score++; else g.missed.push(x); rerender(); } }, o))),
+      answered ? h('div', { class: 'feedback' },
+        h('p', { class: g.pick === x.r[0] ? 'ok-txt' : 'ko-txt' }, g.pick === x.r[0] ? '✓ Bonne réponse !' : `La bonne réponse : ${x.r[0]}`),
+        h('p', { class: 'small muted' }, `Voir ${x.ref}`, ' · ', contextBtn(x.ref)),
+        h('button', { class: 'btn block', onclick: next }, g.i + 1 < n ? 'Question suivante ›' : 'Voir le résultat')) : null)];
+}
+
+/* --- Versets à compléter --- */
+function myGapVerses() {
+  return Object.keys(S.hl).sort(byRef).map(k => { const [b, c, v] = k.split('.').map(Number); return { r: `${BOOKS[b][0]} ${c}:${v}`, t: verseTxt(b, c, v) }; })
+    .filter(x => x.t && x.t.split(' ').length >= 5);
+}
+const splitWords = t => t.split(/(\p{L}[\p{L}-]*)/u); // [texte, mot, texte, mot, …]
+const isCandidate = w => w.length >= 4 && !MOTS_VIDES.has(foldW(w));
+function makeGap(verse, niv, wordPool) {
+  const parts = splitWords(verse.t);
+  const idx = []; for (let i = 1; i < parts.length; i += 2) if (isCandidate(parts[i])) idx.push(i);
+  // de préférence les mots longs (souvent les plus importants), sans répéter deux fois le même mot
+  const best = shuffle(idx.sort((a, b) => parts[b].length - parts[a].length).slice(0, Math.max(4, niv.trous * 3)));
+  const pick = [], seen = new Set();
+  for (const i of best) { const f = foldW(parts[i]); if (!seen.has(f) && pick.length < niv.trous) { seen.add(f); pick.push(i); } }
+  pick.sort((a, b) => a - b);
+  const answers = pick.map(i => parts[i]);
+  // mots « leurres » : pris dans d'autres versets, d'une longueur proche, avec la même majuscule que la réponse
+  const decoys = [];
+  for (const w of shuffle(wordPool)) {
+    if (decoys.length >= niv.leurres) break;
+    const ref = answers[decoys.length % answers.length];
+    const f = foldW(w);
+    if (seen.has(f) || Math.abs(w.length - ref.length) > 3) continue;
+    seen.add(f);
+    const up = ref[0] === ref[0].toUpperCase();
+    decoys.push(up ? w[0].toUpperCase() + w.slice(1) : w[0].toLowerCase() + w.slice(1));
+  }
+  const segs = []; let k = 0;
+  parts.forEach((p, i) => { if (pick.includes(i)) segs.push({ blank: k++ }); else if (p) segs.push({ t: p }); });
+  return { r: verse.r, t: verse.t, segs, answers, chips: shuffle([...answers, ...decoys]).map((w, id) => ({ id, w })), fill: answers.map(() => null), marks: null, target: null, tries: 0 };
+}
+function startGap() {
+  const niv = NIVEAUX[S.jeux.niv] || NIVEAUX.facile;
+  const src = S.jeux.src === 'miens' ? myGapVerses() : (window.VERSETS || []).map(v => ({ r: v.r, t: v.t }));
+  const pool = [];
+  for (const v of [...src, ...(window.VERSETS || [])]) for (const w of splitWords(v.t).filter((_, i) => i % 2)) if (isCandidate(w)) pool.push(w);
+  V.g = { type: 'trous', items: shuffle(src).slice(0, NB_TROUS).map(v => makeGap(v, niv, pool)), i: 0, score: 0 };
+  render();
+}
+// Placer un mot (chip) dans une case ; si la case était occupée, l'ancien mot retourne dans la réserve
+function placeChip(it, chipId, k) {
+  if (it.done) return;
+  const prev = it.fill.indexOf(chipId); if (prev >= 0) it.fill[prev] = null;
+  if (k == null) k = it.target != null && it.fill[it.target] == null ? it.target : it.fill.indexOf(null);
+  if (k < 0) return;
+  it.fill[k] = chipId; it.target = null; it.marks = null;
+  rerender();
+}
+let drag = null; // glisser-déposer au doigt ou à la souris (pointer events : marche aussi sur téléphone)
+function chipEl(it, c) {
+  const used = it.fill.includes(c.id);
+  const el = h('button', { class: 'wchip' + (used ? ' used' : ''), disabled: used || it.done }, c.w);
+  el.addEventListener('pointerdown', e => {
+    if (used || it.done) return;
+    drag = { it, c, el, x: e.clientX, y: e.clientY, ghost: null, over: null };
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  el.addEventListener('pointermove', e => {
+    if (!drag || drag.el !== el) return;
+    if (!drag.ghost) {
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+      drag.ghost = h('div', { class: 'wchip ghost' }, c.w); document.body.append(drag.ghost); el.classList.add('dragging');
+    }
+    drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
+    const t = document.elementFromPoint(e.clientX, e.clientY), b = t && t.closest('.blank');
+    if (drag.over && drag.over !== b) drag.over.classList.remove('over');
+    if (b) b.classList.add('over'); drag.over = b;
+  });
+  const end = e => {
+    if (!drag || drag.el !== el) return;
+    const d = drag; drag = null;
+    if (!d.ghost) return placeChip(it, c.id); // simple toucher
+    d.ghost.remove(); el.classList.remove('dragging');
+    if (d.over) placeChip(it, c.id, +d.over.dataset.k);
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', () => { if (drag && drag.el === el) { if (drag.ghost) drag.ghost.remove(); el.classList.remove('dragging'); drag = null; } });
+  return el;
+}
+function gapView() {
+  const g = V.g, n = g.items.length;
+  if (g.done) return [gameTop('Verset', n, n, g.score), ...resultCard('trous', g.score, n, g.record, startGap)];
+  const it = g.items[g.i];
+  const word = id => it.chips.find(c => c.id === id).w;
+  const text = h('p', { class: 'gap-text' }, it.segs.map(s => {
+    if (s.t != null) return s.t;
+    const k = s.blank, f = it.fill[k], m = it.marks && it.marks[k];
+    return h('button', {
+      class: 'blank' + (f == null ? ' empty' : '') + (it.target === k ? ' target' : '') + (m === true ? ' ok' : m === false ? ' ko' : '') + (it.done ? ' done' : ''),
+      'data-k': k, 'aria-label': f == null ? 'Case vide' : `Retirer « ${word(f)} »`,
+      onclick: () => { if (it.done) return; if (f != null) { it.fill[k] = null; it.marks = null; } else it.target = it.target === k ? null : k; rerender(); }
+    }, f == null ? ' ' : word(f));
+  }));
+  const full = !it.fill.includes(null);
+  const check = () => {
+    it.marks = it.fill.map((id, k) => foldW(word(id)) === foldW(it.answers[k]));
+    if (it.marks.every(Boolean)) { it.done = true; it.won = true; if (!it.tries) g.score++; }
+    else it.tries++;
+    rerender();
+  };
+  const reveal = () => {
+    it.fill = it.answers.map(a => it.chips.find(c => c.w === a).id);
+    it.marks = it.answers.map(() => true); it.done = true; rerender();
+  };
+  const next = () => {
+    if (g.i + 1 < n) { g.i++; render(); }
+    else { g.done = true; g.record = endGame('trous', g.score); render(); }
+  };
+  const nbWrong = it.marks ? it.marks.filter(m => !m).length : 0;
+  return [gameTop('Verset', g.i, n, g.score),
+    h('div', { class: 'card' },
+      h('div', { class: 'kicker' }, it.r),
+      text,
+      it.done ? null : h('div', { class: 'wbank', 'aria-label': 'Mots proposés' }, it.chips.map(c => chipEl(it, c))),
+      it.done
+        ? h('div', { class: 'feedback' },
+            h('p', { class: it.won ? 'ok-txt' : 'muted' }, it.won ? (it.tries ? '✓ C’est juste !' : '✓ Bravo, du premier coup !') : 'Voici le verset complet. Vous le retiendrez la prochaine fois !'),
+            h('p', { class: 'small muted' }, contextBtn(it.r)),
+            h('button', { class: 'btn block', onclick: next }, g.i + 1 < n ? 'Verset suivant ›' : 'Voir le résultat'))
+        : h('div', { class: 'feedback' },
+            nbWrong ? h('p', { class: 'ko-txt small' }, nbWrong > 1 ? `${nbWrong} mots ne sont pas à la bonne place. Touchez un mot en rouge pour le retirer.` : 'Un mot n’est pas à la bonne place. Touchez le mot en rouge pour le retirer.') : null,
+            h('button', { class: 'btn block', disabled: !full, onclick: check }, 'Vérifier'),
+            it.tries ? h('button', { class: 'sel-link', onclick: reveal }, 'Voir la réponse') : null))];
 }
 
 /* ---------- Plan ---------- */
