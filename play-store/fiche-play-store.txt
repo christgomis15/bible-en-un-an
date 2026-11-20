@@ -1,0 +1,116 @@
+FICHE PLAY STORE — « Bible en un an »
+(à copier-coller dans la Google Play Console)
+
+==================================================
+1. INFORMATIONS PRINCIPALES  (Fiche principale du Store)
+==================================================
+
+Nom de l'application (30 caractères max) :
+Bible en un an
+
+Description courte (80 caractères max) :
+Lire toute la Bible en un an, avec la Parole de l'heure, surlignage et jeux.
+
+Description complète (4000 caractères max) :
+Lisez toute la Bible en un an, à votre rythme, avec une application simple, belle et sans publicité.
+
+📖 UNE LECTURE CHAQUE JOUR
+Du lundi au samedi, une lecture d'environ 10 à 15 minutes vous fait parcourir toute la Bible en un an. Le dimanche reste libre pour rattraper ou méditer. Vous avez pris du retard ? Pas de culpabilité : un bouton permet de reprendre simplement là où vous en êtes.
+
+✨ LA PAROLE DE L'HEURE
+Un verset d'encouragement s'affiche chaque heure. Si vous le souhaitez, recevez-le en notification aux heures que vous choisissez (par exemple 6 h, 12 h et 18 h).
+
+🖍️ SURLIGNEZ VOS VERSETS
+Touchez un verset pour le surligner avec la couleur de votre choix, et donnez un nom à vos couleurs : « Mes combats », « Action de grâce », « Identité en Christ »… Retrouvez ensuite tous vos versets, classés par couleur.
+
+📚 TOUTE LA BIBLE
+Lisez n'importe quel livre et chapitre, cherchez un mot ou une référence (par exemple « Jean 3:16 »). Deux traductions sont incluses : Louis Segond 1910 et Darby 1885.
+
+🎮 APPRENDRE EN JOUANT
+• Un quiz biblique à choix multiples, sur l'Ancien ou le Nouveau Testament, avec la référence de chaque réponse.
+• Des versets à compléter : faites glisser les mots manquants à leur place. Trois niveaux, et la possibilité de s'entraîner avec ses propres versets surlignés pour les apprendre par cœur.
+
+🌙 JARDIN LE JOUR, VEILLÉE LE SOIR
+Un style clair et frais pendant la journée, un style de nuit doux pour les yeux le soir, qui change automatiquement selon l'heure. La taille du texte se règle facilement.
+
+📶 FONCTIONNE SANS INTERNET
+Une fois installée, l'application fonctionne même hors connexion.
+
+🔒 RESPECT DE VOTRE VIE PRIVÉE
+Aucun compte, aucune publicité, aucun suivi. Votre progression et vos versets restent sur votre téléphone.
+
+« Ta parole est une lampe à mes pieds, et une lumière sur mon sentier. » Psaume 119:105
+
+==================================================
+2. ÉLÉMENTS GRAPHIQUES  (dans le dossier play-store)
+==================================================
+
+Icône (512 × 512) ............ icone-512.png
+Image de présentation (1024 × 500) ... banniere-1024x500.png
+Captures d'écran du téléphone (dans « captures ») :
+  1-aujourdhui.png
+  2-bible-veillee.png
+  3-quiz.png
+  4-versets-a-completer.png
+(Vous pouvez aussi utiliser les mêmes captures pour « Tablette 7 pouces » et « Tablette 10 pouces ».)
+
+==================================================
+3. CATÉGORIE ET COORDONNÉES
+==================================================
+
+Type d'application : Application
+Catégorie : Livres et références
+Adresse e-mail de contact : (votre adresse e-mail)
+Site Web : https://bible-en-un-an.vercel.app
+
+==================================================
+4. CONTENU DE L'APPLICATION  (menu « Règles et programmes » > « Contenu de l'application »)
+==================================================
+
+Règles de confidentialité — adresse à coller :
+https://bible-en-un-an.vercel.app/confidentialite.html
+
+Annonces (publicités) : Non, mon application ne contient pas d'annonces.
+
+Accès à l'application : Toutes les fonctionnalités sont disponibles sans restriction (pas de connexion).
+
+Classification du contenu (questionnaire) :
+  - Catégorie : « Référence, actualités ou éducation »
+  - Répondre NON à toutes les questions (violence, peur, sexualité, langage grossier, drogues, jeux d'argent…).
+  - Interaction entre utilisateurs / partage de contenu : NON.
+  - Achats numériques : NON.
+
+Public cible et contenu :
+  - Tranches d'âge conseillées : 13-15 ans, 16-17 ans, 18 ans et plus.
+    (Ne pas cocher les moins de 13 ans : sinon Google impose des règles supplémentaires « Familles ».)
+  - L'application pourrait-elle attirer involontairement les enfants ? Non.
+
+Sécurité des données (questionnaire) :
+  - Votre application collecte-t-elle ou partage-t-elle des données utilisateur ? OUI
+    (uniquement pour les notifications)
+  - Toutes les données sont-elles chiffrées en transit ? OUI
+  - Les utilisateurs peuvent-ils demander la suppression de leurs données ? OUI
+    (en désactivant les notifications dans les Réglages)
+  - Type de données collectées : « ID de l'appareil ou autres ID »
+      · Collectée : OUI      · Partagée : NON
+      · Traitée de façon éphémère : NON
+      · Obligatoire ou facultative : FACULTATIVE (l'utilisateur choisit d'activer les notifications)
+      · Raison : « Fonctionnement de l'application »
+  - Rien d'autre (pas de nom, e-mail, localisation, contacts, photos, etc.).
+
+Application d'actualités : Non.
+Application de santé : Non.
+Application financière : Non.
+Applications gouvernementales : Non.
+
+==================================================
+5. MESSAGE POUR LES 12 TESTEURS  (à envoyer par WhatsApp ou e-mail)
+==================================================
+
+Bonjour ! 🙏
+Je prépare la publication de mon application « Bible en un an » sur le Play Store. Google demande qu'au moins 12 personnes la testent pendant 14 jours avant la publication.
+Pouvez-vous m'aider ? Il suffit :
+1. de m'envoyer l'adresse Gmail utilisée sur votre téléphone Android ;
+2. de cliquer sur le lien que je vous enverrai ensuite, puis d'installer l'application ;
+3. de la garder installée au moins 14 jours (et de l'ouvrir de temps en temps 😊).
+Merci beaucoup !

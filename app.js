@@ -1106,7 +1106,8 @@ function viewSettings() {
     h('div', { class: 'card small muted' },
       versionLine(),
       h('p', null, 'Textes bibliques : Louis Segond (1910) et Darby (1885), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
-      h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez les notifications, seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et les heures choisies sont conservés, et ils sont effacés dès que vous désactivez.'))
+      h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez les notifications, seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et les heures choisies sont conservés, et ils sont effacés dès que vous désactivez.'),
+      h('p', null, h('a', { href: 'confidentialite.html' }, 'Politique de confidentialité')))
   ];
 }
 
