@@ -3,6 +3,7 @@
 const webpush = require('web-push');
 const { put, del, list, head } = require('@vercel/blob');
 const VERSETS = require('./_versets.js');
+const PLAN = require('./_plan.js'); // [titre, minutes] des 312 lectures
 const VAPID_APPLI = 'BGznV46AK-R3uZDIjAiCMBf3X_2aOv5CAx9nSAa0-ULbrH-bD7efKeq2lykVg6K5aaDvOV9Jprd-DjvgaquZkv8'; // = VAPID_PUBLIC dans app.js
 
 // Même calcul que versetDeLheure() dans app.js
@@ -14,6 +15,14 @@ function heureLocale(now, tz) {
   const p = {};
   for (const x of new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', hourCycle: 'h23' }).formatToParts(now)) p[x.type] = +x.value;
   return p;
+}
+// Numéro du jour de lecture (du lundi au samedi depuis la date de départ), comme stateOn() dans app.js ; null le dimanche ou hors plan
+function jourDuPlan(start, y, m, d) {
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const a = Date.UTC(sy, sm - 1, sd) / 864e5, b = Date.UTC(y, m - 1, d) / 864e5;
+  if (b < a || new Date(b * 864e5).getUTCDay() === 0) return null;
+  let n = 0; for (let x = a; x <= b; x++) if (new Date(x * 864e5).getUTCDay() !== 0) n++;
+  return n >= 1 && n <= PLAN.length ? n : null;
 }
 // Anciens abonnements (plage from/to) : on applique le nouveau défaut, 3 versets par jour
 const heuresDe = a => (Array.isArray(a.hours) && a.hours.length ? a.hours : [6, 12, 18]);
@@ -40,14 +49,23 @@ module.exports = async (req, res) => {
   try { await head(cle); return res.status(200).json({ ok: true, deja: true }); } catch (e) { /* pas encore envoyé */ }
   await put(cle, '{}', { access: 'public', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json' });
   const blobs = await tousLesAbonnements();
-  let envoyes = 0, supprimes = 0, erreurs = 0;
+  let envoyes = 0, rappels = 0, supprimes = 0, erreurs = 0;
 
   for (let i = 0; i < blobs.length; i += 50) {
     await Promise.all(blobs.slice(i, i + 50).map(async b => {
       try {
         const a = await (await fetch(b.url + '?t=' + now.getTime())).json();
         const t = heureLocale(now, a.tz);
-        if (!heuresDe(a).includes(t.hour)) return;
+        // Rappel de la lecture du jour, sauf si elle est déjà lue
+        if (a.lecture && a.lecture.h === t.hour) {
+          const n = jourDuPlan(a.lecture.start, t.year, t.month, t.day);
+          if (n && !(a.lecture.lus || []).includes(n)) {
+            const [titre, min] = PLAN[n - 1];
+            await webpush.sendNotification(a.subscription, JSON.stringify({ type: 'lecture', title: '📖 Lecture du jour', body: `${titre} · environ ${min} min. Bonne lecture !` }), { TTL: 3000 });
+            rappels++;
+          }
+        }
+        if (a.versets === false || !heuresDe(a).includes(t.hour)) return;
         const v = verset(t.year, t.month, t.day, t.hour);
         await webpush.sendNotification(a.subscription, JSON.stringify({ title: `Parole de Dieu · ${v.r}`, body: v.t }), { TTL: 3000 });
         envoyes++;
@@ -65,6 +83,6 @@ module.exports = async (req, res) => {
     const aSuppr = vieux.filter(x => new Date(x.uploadedAt).getTime() < limite).map(x => x.url);
     if (aSuppr.length) await del(aSuppr);
   }
-  console.log(`parole de l'heure : ${blobs.length} abonnés, ${envoyes} envoyés, ${supprimes} supprimés, ${erreurs} erreurs`);
-  res.status(200).json({ ok: true, abonnes: blobs.length, envoyes, supprimes, erreurs });
+  console.log(`parole de l'heure : ${blobs.length} abonnés, ${envoyes} envoyés, ${rappels} rappels de lecture, ${supprimes} supprimés, ${erreurs} erreurs`);
+  res.status(200).json({ ok: true, abonnes: blobs.length, envoyes, rappels, supprimes, erreurs });
 };

@@ -1,5 +1,6 @@
 // Enregistre (POST) ou supprime (DELETE) l'abonnement aux notifications d'un appareil.
-// Seules sont conservées : l'adresse technique de notification du navigateur, le fuseau horaire et les heures choisies.
+// Seules sont conservées : l'adresse technique de notification du navigateur, le fuseau horaire, les heures choisies
+// et, si le rappel de lecture est activé, son heure, la date de départ du plan et les numéros des jours déjà lus.
 const crypto = require('crypto');
 const { put, del, list } = require('@vercel/blob');
 
@@ -8,6 +9,14 @@ const HEURES_DEFAUT = [6, 12, 18];
 function heures(v) {
   const h = Array.isArray(v) ? [...new Set(v.filter(x => Number.isInteger(x) && x >= 0 && x <= 23))].sort((a, b) => a - b) : [];
   return h.length ? h : HEURES_DEFAUT;
+}
+// Rappel de la lecture du jour (facultatif)
+function lecture(l) {
+  if (!l || typeof l !== 'object') return null;
+  const h = Number.isInteger(l.h) && l.h >= 0 && l.h <= 23 ? l.h : 7;
+  if (typeof l.start !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(l.start)) return null;
+  const lus = Array.isArray(l.lus) ? [...new Set(l.lus.filter(n => Number.isInteger(n) && n >= 1 && n <= 400))].sort((a, b) => a - b) : [];
+  return { h, start: l.start, lus };
 }
 function fuseau(tz) {
   try { new Intl.DateTimeFormat('fr', { timeZone: tz }); return tz; } catch (e) { return 'Europe/Paris'; }
@@ -35,6 +44,8 @@ module.exports = async (req, res) => {
     subscription: { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } },
     tz: fuseau(body.tz), hours: heures(body.hours)
   };
+  if (body.versets === false) data.versets = false; // seulement le rappel de lecture
+  const l = lecture(body.lecture); if (l) data.lecture = l;
   await put(chemin, JSON.stringify(data), {
     access: 'public', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json', cacheControlMaxAge: 60
   });

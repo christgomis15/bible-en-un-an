@@ -182,6 +182,8 @@ function norm(s) {
   delete s.verses; delete s.vc;
   if (!Array.isArray(s.pushHours) || !s.pushHours.length) s.pushHours = [6, 12, 18];
   delete s.pushFrom; delete s.pushTo;
+  s.vOff = s.vOff === true; // versets de la journée coupés, mais rappel de lecture possible
+  s.lect = Object.assign({ on: false, h: Math.min(22, Math.max(5, parseInt(s.remind, 10) || 7)) }, s.lect);
   if (!(s.version in VERSIONS)) s.version = 'lsg';
   s.jeux = Object.assign({ qp: 'tout', src: 'connus', niv: 'facile' }, s.jeux);
   for (const g of ['qcm', 'trous']) s.jeux[g] = Object.assign({ n: 0, best: 0 }, s.jeux[g]);
@@ -195,7 +197,7 @@ function load() {
 // Catégorie d'un verset surligné (les anciens surlignages vont dans la première catégorie)
 const catOf = key => S.cats.find(c => c.id === S.hl[key]) || S.cats[0];
 const fond = c => c + '59'; // couleur à ~35 % d'opacité
-function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} }
+function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} try { syncLecture(); } catch (e) {} }
 
 /* ---------- Calendrier du plan (lundi – samedi) ---------- */
 function stateOn(date) {
@@ -1118,17 +1120,13 @@ function shiftPlan() {
 /* ---------- Réglages ---------- */
 function viewSettings() {
   const startIn = h('input', { type: 'date', value: S.start });
-  const timeIn = h('input', { type: 'time', value: S.remind || '06:30' });
   const fileIn = h('input', { type: 'file', accept: 'application/json', style: 'display:none', onchange: importData });
   return [
     ...installCard(),
     themeCard(),
     ...pushCard(),
     catsCard(),
-    h('div', { class: 'card' }, h('h2', null, 'Rappel quotidien'),
-      h('p', { class: 'muted small' }, 'Génère un rappel dans le calendrier de votre téléphone, répété du lundi au samedi pendant 312 jours. Il fonctionne même quand l’application est fermée.'),
-      h('label', { class: 'f' }, 'Heure du rappel'), timeIn,
-      h('p', null, h('button', { class: 'btn', onclick: () => { S.remind = timeIn.value || '06:30'; save(); downloadICS(S.remind); } }, 'Ajouter au calendrier (.ics)'))),
+    lectureCard(),
     h('div', { class: 'card' }, h('h2', null, 'Date de départ'),
       h('p', { class: 'muted small' }, 'Changer la date décale tout le calendrier. Vos jours déjà lus restent enregistrés.'),
       startIn, h('p', null, h('button', { class: 'btn alt', onclick: () => { if (startIn.value) { startOn(startIn.value); V.tab = 'settings'; render(); } } }, 'Appliquer')),
@@ -1143,7 +1141,7 @@ function viewSettings() {
     h('div', { class: 'card small muted' },
       versionLine(),
       h('p', null, 'Textes bibliques : Louis Segond (1910) et Darby (1885), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
-      h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez les notifications, seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et les heures choisies sont conservés, et ils sont effacés dès que vous désactivez.'),
+      h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez les notifications, seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et les heures choisies sont conservés (et, pour le rappel de lecture, la date de départ du plan et les numéros des jours lus). Tout est effacé dès que vous désactivez.'),
       h('p', null, h('a', { href: 'confidentialite.html' }, 'Politique de confidentialité')))
   ];
 }
@@ -1274,8 +1272,18 @@ function b64ToBytes(s) {
 }
 async function sendSub(sub, method) {
   const r = await fetch('api/abonnement', { method, headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subscription: sub, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, hours: myHours() }) });
+    body: JSON.stringify({ subscription: sub, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, hours: myHours(), versets: !S.vOff, lecture: lectureInfo() }) });
   if (!r.ok) throw new Error('serveur ' + r.status);
+}
+// Rappel de lecture : le serveur a besoin de l'heure, de la date de départ et des jours déjà lus (pour se taire une fois la lecture faite)
+const lectureInfo = () => S.lect.on && S.start ? { h: S.lect.h, start: S.start, lus: Object.keys(S.done).map(Number) } : null;
+let lectSig = null, lectT = 0;
+function syncLecture() {
+  if (!pushSub || !S.lect.on) return;
+  const sig = [S.start, Object.keys(S.done).sort().join(','), S.lect.h].join('|');
+  if (sig === lectSig) return;
+  lectSig = sig; clearTimeout(lectT);
+  lectT = setTimeout(() => sendSub(pushSub, 'POST').catch(() => { lectSig = null; }), 1500);
 }
 async function pushOn() {
   if (await Notification.requestPermission() !== 'granted') { alert('Les notifications sont refusées. Autorisez-les dans les réglages du téléphone pour cette application.'); return; }
@@ -1318,16 +1326,56 @@ function pushCard() {
   else if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !(matchMedia('(display-mode: standalone)').matches || navigator.standalone))
     notif = [h('p', { class: 'small' }, 'Pour recevoir les notifications sur iPhone, installez d’abord l’application sur l’écran d’accueil (voir ci-dessus), puis ouvrez-la depuis son icône.')];
   else {
-    if (pushSub === undefined) navigator.serviceWorker.ready.then(r => r.pushManager.getSubscription()).then(s => { pushSub = s; if (V.tab === 'settings') { const y = scrollY; render(); scrollTo(0, y); } });
+    checkPushSub();
     const status = h('p', { class: 'small' });
     const run = fn => async () => { status.textContent = 'Un instant…'; try { await fn(); status.textContent = ''; render(); } catch (e) { status.textContent = 'Échec : vérifiez votre connexion et réessayez.'; } };
+    const actif = pushSub && !S.vOff;
     notif = [
-      pushSub ? h('p', { class: 'small ok-txt' }, '✓ Notifications activées sur cet appareil') : h('p', { class: 'small muted' }, 'Activez les notifications pour recevoir ces versets même quand l’application est fermée.'),
-      h('p', null, pushSub ? h('button', { class: 'btn alt', onclick: run(pushOff) }, 'Désactiver les notifications')
-        : h('button', { class: 'btn', onclick: run(pushOn) }, 'Activer les notifications')),
+      actif ? h('p', { class: 'small ok-txt' }, '✓ Notifications activées sur cet appareil') : h('p', { class: 'small muted' }, 'Activez les notifications pour recevoir ces versets même quand l’application est fermée.'),
+      h('p', null, actif ? h('button', { class: 'btn alt', onclick: run(async () => { S.vOff = true; save(); if (S.lect.on) await sendSub(pushSub, 'POST'); else await pushOff(); }) }, 'Désactiver les notifications')
+        : h('button', { class: 'btn', onclick: run(async () => { S.vOff = false; save(); await pushOn(); }) }, 'Activer les notifications')),
       status];
   }
   return [h('div', { class: 'card' }, title, ...chooser, h('hr', { class: 'sep' }), ...notif)];
+}
+
+function checkPushSub() {
+  if (pushSub !== undefined || checkPushSub.busy || !pushSupported()) return;
+  checkPushSub.busy = true;
+  navigator.serviceWorker.ready.then(r => r.pushManager.getSubscription()).then(s => {
+    pushSub = s; checkPushSub.busy = false; syncLecture();
+    if (V.tab === 'settings') { const y = scrollY; render(); scrollTo(0, y); }
+  });
+}
+// Rappel de la lecture du jour, par notification (du lundi au samedi, sauf si la lecture est déjà faite)
+function lectureCard() {
+  const title = h('h2', null, 'Rappel de la lecture du jour');
+  const intro = h('p', { class: 'muted small' }, 'Du lundi au samedi, une notification vous rappelle le passage du jour, par exemple « Genèse 26–28 · environ 12 min ». Pas de rappel le dimanche, ni si la lecture du jour est déjà marquée comme faite. Toucher la notification ouvre la lecture.');
+  const hourSel = h('select', { 'aria-label': 'Heure du rappel', onchange: e => {
+    S.lect.h = +e.target.value; save();
+    if (pushSub && S.lect.on) sendSub(pushSub, 'POST').catch(() => {});
+  } }, Array.from({ length: 18 }, (_, i) => i + 5).map(x => h('option', { value: x, selected: x === S.lect.h }, `${pad(x)} h`)));
+  const ics = h('details', { class: 'more-hours' }, h('summary', null, 'Ou ajouter un rappel dans le calendrier du téléphone'),
+    h('p', { class: 'muted small' }, 'Crée un rendez-vous répété du lundi au samedi dans l’agenda, à l’heure choisie ci-dessus.'),
+    h('button', { class: 'btn alt', onclick: () => { S.remind = pad(S.lect.h) + ':00'; save(); downloadICS(S.remind); } }, 'Ajouter au calendrier (.ics)'));
+  const body = [intro, h('label', { class: 'f' }, 'Heure du rappel'), hourSel];
+  if (!S.start) body.push(h('p', { class: 'small muted' }, 'Choisissez d’abord une date de départ du plan.'));
+  else if (!PUSH_PRET || !pushSupported()) body.push(h('p', { class: 'small muted' }, 'Ce navigateur ne permet pas les notifications : utilisez plutôt le rappel dans le calendrier, ci-dessous.'));
+  else if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !(matchMedia('(display-mode: standalone)').matches || navigator.standalone))
+    body.push(h('p', { class: 'small' }, 'Sur iPhone, installez d’abord l’application sur l’écran d’accueil, puis ouvrez-la depuis son icône.'));
+  else {
+    checkPushSub();
+    const actif = pushSub && S.lect.on;
+    const status = h('p', { class: 'small' });
+    const run = fn => async () => { status.textContent = 'Un instant…'; try { await fn(); status.textContent = ''; const y = scrollY; render(); scrollTo(0, y); } catch (e) { status.textContent = 'Échec : vérifiez votre connexion et réessayez.'; } };
+    body.push(
+      actif ? h('p', { class: 'small ok-txt' }, `✓ Rappel activé : chaque jour de lecture à ${pad(S.lect.h)} h`) : null,
+      h('p', null, actif
+        ? h('button', { class: 'btn alt', onclick: run(async () => { S.lect.on = false; save(); if (S.vOff) await pushOff(); else await sendSub(pushSub, 'POST'); }) }, 'Désactiver le rappel')
+        : h('button', { class: 'btn', onclick: run(async () => { if (!pushSub) S.vOff = true; S.lect.on = true; save(); await pushOn(); }) }, 'Activer le rappel')),
+      status);
+  }
+  return h('div', { class: 'card' }, title, ...body, h('hr', { class: 'sep' }), ics);
 }
 
 function downloadBlob(name, type, content) {
@@ -1364,20 +1412,26 @@ function importData(e) {
   r.readAsText(f);
 }
 
+// Ouvrir la lecture du jour (rappel touché) : onglet Aujourd'hui, descendu jusqu'au texte
+function openLecture() {
+  V.tab = 'today'; V.day = null; render();
+  setTimeout(() => { const el = view.querySelector('.day-head'); if (el) el.scrollIntoView({ block: 'start' }); }, 50);
+}
 /* ---------- Démarrage ---------- */
 applyTheme();
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => { V.tab = b.dataset.tab; if (V.tab === 'today') V.day = null; if (V.tab === 'bible') V.bv = 'read'; render(); }));
 
 if (window.BIBLE_LSG && window.BIBLE_PLAN) {
   LSG = TEXTS.lsg = window.BIBLE_LSG; PLAN = window.BIBLE_PLAN; TOTAL_CHARS = PLAN.reduce((a, d) => a + d.n, 0); render();
+  if (S.lect.on) checkPushSub(); // remet à jour le serveur (jours lus hors connexion…)
   if (S.version !== 'lsg') loadVersion(S.version).then(() => { FOLDED = null; rerender(); }, () => {});
   if (window.VERSETS && VERSETS.length) {
     document.body.append(fab, bubble); scheduleHourRefresh();
-    const fromNotif = new URLSearchParams(location.search).has('verset');
-    if (fromNotif) history.replaceState(null, '', location.pathname);
-    if (fromNotif) openBubble(); else maybeAutoOpen();
+    const qs = new URLSearchParams(location.search), fromNotif = qs.has('verset'), fromLect = qs.has('lecture');
+    if (fromNotif || fromLect) history.replaceState(null, '', location.pathname);
+    if (fromLect) openLecture(); else if (fromNotif) openBubble(); else maybeAutoOpen();
     // Notification touchée alors que l'appli était déjà ouverte
-    if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'verset') openBubble(); });
+    if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'verset') openBubble(); if (e.data && e.data.type === 'lecture') openLecture(); });
   }
 } else {
   view.replaceChildren(h('div', { class: 'card' }, h('h2', null, 'Chargement impossible'),

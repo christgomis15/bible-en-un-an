@@ -1,5 +1,5 @@
 // Service worker : fonctionnement hors ligne (stale-while-revalidate) + notifications
-const CACHE = 'bible-an-v22';
+const CACHE = 'bible-an-v23';
 // Versions de la Bible téléchargées à la demande (Darby…) : cache à part, conservé d'une mise à jour à l'autre
 const VCACHE = 'bible-versions-v1';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'data/lsg.js', 'data/plan.js', 'data/versets.js', 'data/quiz.js', 'confidentialite.html', 'icons/icon-192.png', 'icons/icon-512.png', 'fonts/jakarta.woff2', 'fonts/inter.woff2', 'fonts/cormorant.woff2', 'fonts/cormorant-italic.woff2'];
@@ -36,17 +36,20 @@ function versetLocal() {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = {}; }
-  if (!d.body) { const v = versetLocal(); if (v) d = { title: `Parole de Dieu · ${v.r}`, body: v.t }; }
+  const lecture = d.type === 'lecture';
+  if (!d.body && !lecture) { const v = versetLocal(); if (v) d = { title: `Parole de Dieu · ${v.r}`, body: v.t }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Parole de Dieu', {
     body: d.body || 'Ouvrez l’application pour lire la parole de l’heure.',
-    icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: 'parole-de-l-heure', renotify: true, lang: 'fr'
+    icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: lecture ? 'lecture-du-jour' : 'parole-de-l-heure', renotify: true, lang: 'fr',
+    data: { type: lecture ? 'lecture' : 'verset' }
   }));
 });
-// Toucher la notification ouvre l'appli avec la bulle du verset
+// Toucher la notification ouvre l'appli : la bulle du verset, ou la lecture du jour pour le rappel
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const type = (e.notification.data && e.notification.data.type) || 'verset';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
-    for (const c of cs) if ('focus' in c) { c.postMessage({ type: 'verset' }); return c.focus(); }
-    return self.clients.openWindow('./?verset=1');
+    for (const c of cs) if ('focus' in c) { c.postMessage({ type }); return c.focus(); }
+    return self.clients.openWindow(type === 'lecture' ? './?lecture=1' : './?verset=1');
   }));
 });

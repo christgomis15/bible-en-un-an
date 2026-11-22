@@ -116,7 +116,7 @@ details.week .count{font-weight:400;color:var(--muted);font-size:.85rem}
 .row .p{flex:1}
 
 label.f{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
-input[type=date],input[type=time]{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input[type=date],input[type=time],.card select{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 .sep{border:0;border-top:1px solid var(--line);margin:14px 0}
 .verse-saved{border-left:3px solid var(--gold);padding:2px 0 2px 10px;margin:10px 0}
 .verse-saved .ref{font-size:.8rem;color:var(--gold);font-weight:700}
@@ -453,3 +453,4 @@ html[data-theme="veillee"] .score-ring>div{background:#19204a}
 .record{display:inline-block;background:var(--coral-soft);padding:6px 14px;border-radius:99px;font-weight:700;margin:6px 0}
 .result-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
 @media (prefers-reduced-motion:reduce){.opt.ok,.opt.ko,.stars .on{animation:none}}
+.card select{min-width:110px;display:block;margin:4px 0 6px}

@@ -18,7 +18,10 @@ Lisez toute la Bible en un an, à votre rythme, avec une application simple, bel
 Du lundi au samedi, une lecture d'environ 10 à 15 minutes vous fait parcourir toute la Bible en un an. Le dimanche reste libre pour rattraper ou méditer. Vous avez pris du retard ? Pas de culpabilité : un bouton permet de reprendre simplement là où vous en êtes.
 
 ✨ LA PAROLE DE L'HEURE
-Un verset d'encouragement s'affiche chaque heure. Si vous le souhaitez, recevez-le en notification aux heures que vous choisissez (par exemple 6 h, 12 h et 18 h).
+Un verset d'encouragement à des moments choisis de la journée. Si vous le souhaitez, recevez-le en notification aux heures que vous choisissez (par exemple 6 h, 12 h et 18 h).
+
+⏰ UN RAPPEL POUR NE PAS OUBLIER
+À l'heure de votre choix, une notification vous annonce la lecture du jour et sa durée. Elle ne vient pas si vous avez déjà lu.
 
 🖍️ SURLIGNEZ VOS VERSETS
 Touchez un verset pour le surligner avec la couleur de votre choix, et donnez un nom à vos couleurs : « Mes combats », « Action de grâce », « Identité en Christ »… Retrouvez ensuite tous vos versets, classés par couleur.
@@ -88,7 +91,7 @@ Public cible et contenu :
 
 Sécurité des données (questionnaire) :
   - Votre application collecte-t-elle ou partage-t-elle des données utilisateur ? OUI
-    (uniquement pour les notifications)
+    (uniquement pour les notifications et le rappel de lecture)
   - Toutes les données sont-elles chiffrées en transit ? OUI
   - Les utilisateurs peuvent-ils demander la suppression de leurs données ? OUI
     (en désactivant les notifications dans les Réglages)
@@ -96,6 +99,12 @@ Sécurité des données (questionnaire) :
       · Collectée : OUI      · Partagée : NON
       · Traitée de façon éphémère : NON
       · Obligatoire ou facultative : FACULTATIVE (l'utilisateur choisit d'activer les notifications)
+      · Raison : « Fonctionnement de l'application »
+  - Type de données collectées : « Activité dans les applications » > « Autres actions dans l'application »
+      (seulement si le rappel de lecture est activé : date de départ du plan et jours lus)
+      · Collectée : OUI      · Partagée : NON
+      · Traitée de façon éphémère : NON
+      · Obligatoire ou facultative : FACULTATIVE
       · Raison : « Fonctionnement de l'application »
   - Rien d'autre (pas de nom, e-mail, localisation, contacts, photos, etc.).
 
