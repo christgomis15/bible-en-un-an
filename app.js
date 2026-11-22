@@ -166,7 +166,7 @@ function migreCats(s) {
   s.cats = neuf;
 }
 let S = load();
-const V = { g: null, tab: 'today', day: null, ver: 'txt', loadingVer: null, sel: new Set(), bv: 'read', bb: null, q: '', qMax: 100, goto: null };
+const V = { g: null, tab: 'today', day: null, ver: 'txt', loadingVer: null, sel: new Set(), bv: 'read', bb: null, bc: 1, vback: 'chapters', q: '', qMax: 100, goto: null };
 
 function norm(s) {
   s = Object.assign({ start: null, done: {}, font: 19, remind: '06:30' }, s || {});
@@ -711,6 +711,7 @@ function viewBible() {
   const out = [h('div', { class: 'card bible-top' }, form)];
   if (V.bv === 'books') out.push(...bookPicker());
   else if (V.bv === 'chapters') out.push(chapterPicker(V.bb));
+  else if (V.bv === 'verses') out.push(versePicker(V.bb, V.bc));
   else if (V.bv === 'search') out.push(searchResults(V.q));
   else out.push(...chapterView());
   return out;
@@ -727,6 +728,7 @@ function chapterView() {
   const card = h('div', { class: 'card' },
     versionSeg(false),
     h('div', { class: 'tools' },
+      h('button', { class: 'goto-v', 'aria-label': 'Aller à un verset', onclick: () => { V.bb = b; V.bc = c; V.bv = 'verses'; V.vback = 'read'; render(); scrollTo(0, 0); } }, 'Aller au verset ▾'),
       h('button', { 'aria-label': 'Réduire la taille du texte', onclick: () => setFont(-1) }, 'A−'),
       h('button', { 'aria-label': 'Agrandir la taille du texte', onclick: () => setFont(1) }, 'A+')),
     h('div', { class: 'reader' }, chapterEl(b, c)),
@@ -741,7 +743,7 @@ function bookPicker() {
   const grid = (from, to) => h('div', { class: 'book-grid' }, BOOKS.slice(from, to).map((x, i) => h('button', {
     class: 'book' + (from + i === S.pos.b ? ' on' : ''), onclick: () => {
       const b = from + i;
-      if (LSG[b].length === 1) openBible(b, 1); else { V.bb = b; V.bv = 'chapters'; render(); }
+      V.bb = b; if (LSG[b].length === 1) { V.bc = 1; V.bv = 'verses'; V.vback = 'books'; } else V.bv = 'chapters'; render();
     } }, x[0])));
   return [
     h('div', { class: 'card' }, h('div', { class: 'picker-head' }, h('h2', null, 'Ancien Testament'), h('button', { class: 'sel-link', onclick: () => { V.bv = 'read'; render(); } }, 'Fermer')), grid(0, 39)),
@@ -750,7 +752,19 @@ function bookPicker() {
 function chapterPicker(b) {
   return h('div', { class: 'card' },
     h('div', { class: 'picker-head' }, h('button', { class: 'sel-link', onclick: () => { V.bv = 'books'; render(); } }, '‹ Livres'), h('h2', null, BOOKS[b][0]), h('span')),
-    h('div', { class: 'chap-grid' }, LSG[b].map((_, i) => h('button', { class: 'chap' + (b === S.pos.b && i + 1 === S.pos.c ? ' on' : ''), onclick: () => openBible(b, i + 1) }, i + 1))));
+    h('div', { class: 'chap-grid' }, LSG[b].map((_, i) => h('button', { class: 'chap' + (b === S.pos.b && i + 1 === S.pos.c ? ' on' : ''), onclick: () => { V.bc = i + 1; V.bv = 'verses'; V.vback = 'chapters'; render(); scrollTo(0, 0); } }, i + 1))));
+}
+// Choix du verset : ouvre le chapitre directement sur le verset (surligné un instant)
+function versePicker(b, c) {
+  const back = V.vback === 'read' ? ['‹ Lecture', () => { V.bv = 'read'; render(); }]
+    : V.vback === 'books' ? ['‹ Livres', () => { V.bv = 'books'; render(); }]
+    : ['‹ Chapitres', () => { V.bv = 'chapters'; render(); }];
+  const n = LSG[b][c - 1].length;
+  return h('div', { class: 'card' },
+    h('div', { class: 'picker-head' }, h('button', { class: 'sel-link', onclick: back[1] }, back[0]), h('h2', null, LSG[b].length > 1 ? `${BOOKS[b][0]} ${c}` : BOOKS[b][0]), h('span')),
+    h('button', { class: 'btn block', onclick: () => openBible(b, c) }, 'Lire tout le chapitre'),
+    h('p', { class: 'muted small pick-sub' }, `Ou choisissez un verset (${n}) :`),
+    h('div', { class: 'chap-grid' }, Array.from({ length: n }, (_, i) => h('button', { class: 'chap', onclick: () => openBible(b, c, i + 1) }, i + 1))));
 }
 let FOLDED = null; // texte de toute la Bible (version choisie) sans accents, préparé à la première recherche
 function searchResults(q) {
@@ -789,10 +803,21 @@ const NIVEAUX = { facile: { nom: 'Facile', trous: 1, leurres: 2 }, moyen: { nom:
 const MOTS_VIDES = new Set('avec dans pour mais donc sont nous vous leur leurs cette celui celle celles ceux cela ceci elle elles comme point tout tous toute toutes plus sans sous vers chez aussi ainsi alors soit sera seront etait etaient avait avaient quand dont encore meme votre notre afin parce entre jusqu lorsque puis contre selon avant apres depuis ayant etant aura auront avez avons etes suis fais fait voici voila quelque quiconque jamais peut doit lequel laquelle lesquels lesquelles dire disant'
   .split(' '));
 const foldW = w => fold(w).replace(/[^a-z]/g, '');
-function gameScoreLine(g) {
-  const st = S.jeux[g];
-  return st.n ? `Meilleur score : ${st.best} sur ${g === 'qcm' ? NB_QUIZ : NB_TROUS} · ${st.n} partie${st.n > 1 ? 's' : ''} jouée${st.n > 1 ? 's' : ''}` : 'Pas encore de partie jouée.';
+function gameStats(g) {
+  const st = S.jeux[g], n = g === 'qcm' ? NB_QUIZ : NB_TROUS;
+  if (!st.n) return h('div', { class: 'gstats' }, h('span', { class: 'gstat new' }, '✨ Nouveau : à vous de jouer !'));
+  return h('div', { class: 'gstats' },
+    h('span', { class: 'gstat' }, '🏆 Meilleur : ', h('b', null, `${st.best} / ${n}`)),
+    h('span', { class: 'gstat' }, '🎯 ', h('b', null, st.n), ` partie${st.n > 1 ? 's' : ''}`));
 }
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function gameIcon(paths) {
+  const svg = document.createElementNS(SVG_NS, 'svg'); svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+  for (const d of paths) { const p = document.createElementNS(SVG_NS, 'path'); p.setAttribute('d', d); svg.append(p); }
+  return svg;
+}
+const ICON_QUIZ = ['M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4.5', 'M12 18h.01', 'M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19z'];
+const ICON_TROUS = ['M4 6h16', 'M4 11h5M15 11h5', 'M4 16h9', 'M10 9.5h4v3h-4z', 'M17 15.5h3v1.5h-3z'];
 function endGame(g, score) {
   const st = S.jeux[g]; st.n++; const record = score > st.best; if (record) st.best = score; save(); return record;
 }
@@ -804,45 +829,55 @@ function viewGames() {
   if (V.g && V.g.type === 'trous') return gapView();
   const mine = myGapVerses().length;
   if (S.jeux.src === 'miens' && !mine) S.jeux.src = 'connus';
+  const parties = S.jeux.qcm.n + S.jeux.trous.n;
   return [
-    h('div', { class: 'card' }, h('h2', null, 'Jeux'), h('p', { class: 'muted small' }, 'Pour mieux connaître la Bible et garder la Parole de Dieu dans son cœur.')),
-    h('div', { class: 'card game-card' },
-      h('div', { class: 'kicker' }, 'Quiz biblique'),
-      h('h2', null, 'Questions à choix multiples'),
+    h('div', { class: 'card games-hero' },
+      h('div', { class: 'gh-deco', 'aria-hidden': 'true' }, '✦'),
+      h('div', { class: 'gh-kicker' }, 'Jeux bibliques'),
+      h('h2', null, 'Apprendre en jouant'),
+      h('p', null, 'Pour mieux connaître la Bible et garder la Parole de Dieu dans son cœur.'),
+      parties ? h('p', { class: 'gh-count' }, `${parties} partie${parties > 1 ? 's' : ''} jouée${parties > 1 ? 's' : ''} · continuez !`) : null),
+    h('div', { class: 'card game-card gc-quiz' },
+      h('div', { class: 'gc-head' },
+        h('div', { class: 'gc-art' }, gameIcon(ICON_QUIZ)),
+        h('div', null, h('div', { class: 'kicker' }, 'Quiz biblique'), h('h2', null, 'Questions à choix multiples'))),
       h('p', { class: 'small' }, `${NB_QUIZ} questions tirées au hasard. Après chaque réponse, la référence permet de lire le passage.`),
       segOf([['tout', 'Toute la Bible'], ['at', 'Ancien T.'], ['nt', 'Nouveau T.']], S.jeux.qp, v => { S.jeux.qp = v; }),
-      h('p', { class: 'muted small' }, gameScoreLine('qcm')),
-      h('button', { class: 'btn block', onclick: startQuiz }, 'Jouer')),
-    h('div', { class: 'card game-card' },
-      h('div', { class: 'kicker' }, 'Versets à compléter'),
-      h('h2', null, 'Retrouver les mots manquants'),
+      gameStats('qcm'),
+      h('button', { class: 'btn block play', onclick: startQuiz }, 'Jouer ▸')),
+    h('div', { class: 'card game-card gc-trous' },
+      h('div', { class: 'gc-head' },
+        h('div', { class: 'gc-art' }, gameIcon(ICON_TROUS)),
+        h('div', null, h('div', { class: 'kicker' }, 'Versets à compléter'), h('h2', null, 'Retrouver les mots manquants'))),
       h('p', { class: 'small' }, `${NB_TROUS} versets. Touchez un mot pour le placer dans la case vide, ou faites-le glisser.`),
       h('p', { class: 'f small' }, 'Quels versets ?'),
       segOf([['connus', 'Versets d’encouragement'], ['miens', `Mes versets surlignés (${mine})`, !mine]], S.jeux.src, v => { S.jeux.src = v; }),
       mine ? null : h('p', { class: 'muted small' }, 'Surlignez des versets pendant vos lectures : vous pourrez ensuite vous entraîner à les retenir.'),
       h('p', { class: 'f small' }, 'Niveau'),
       segOf(Object.entries(NIVEAUX).map(([id, n]) => [id, n.nom]), S.jeux.niv, v => { S.jeux.niv = v; }),
-      h('p', { class: 'muted small' }, gameScoreLine('trous')),
-      h('button', { class: 'btn block', onclick: startGap }, 'Jouer'))
+      gameStats('trous'),
+      h('button', { class: 'btn block play', onclick: startGap }, 'Jouer ▸'))
   ];
 }
 function gameTop(label, i, n, score) {
   return h('div', { class: 'card game-top' },
     h('div', { class: 'gt-row' },
       h('span', { class: 'gt-label' }, label, h('b', null, ` ${Math.min(i + 1, n)} / ${n}`)),
-      h('span', { class: 'gt-score' }, `Score : ${score}`),
+      h('span', { class: 'gt-score' }, '⭐ ', h('b', null, score)),
       h('button', { class: 'sel-link', onclick: () => { if (V.g.done || confirm('Quitter la partie en cours ?')) { V.g = null; render(); } } }, 'Quitter')),
     h('div', { class: 'gt-bar' }, h('span', { style: `width:${Math.round(100 * Math.min(i, n) / n)}%` })));
 }
 function resultCard(g, score, n, record, again, extra) {
   const ratio = score / n;
   const msg = ratio === 1 ? 'Parfait ! Quelle connaissance de la Parole !' : ratio >= .7 ? 'Très bien ! Continuez ainsi.' : ratio >= .4 ? 'Bien joué ! Chaque partie fait grandir.' : 'Courage ! On apprend en jouant : rejouez quand vous voulez.';
-  return [h('div', { class: 'card center' },
+  const stars = ratio === 1 ? 3 : ratio >= .7 ? 2 : ratio >= .4 ? 1 : 0;
+  return [h('div', { class: 'card center result-card' },
     h('div', { class: 'kicker' }, 'Résultat'),
-    h('div', { class: 'score-big' }, `${score} / ${n}`),
-    h('p', null, msg),
-    record ? h('p', { class: 'ok-txt' }, 'Nouveau meilleur score !') : null,
-    h('p', null, h('button', { class: 'btn', onclick: again }, 'Rejouer'), h('button', { class: 'btn alt', onclick: () => { V.g = null; render(); } }, 'Retour aux jeux'))),
+    h('div', { class: 'score-ring', style: `--p:${Math.round(ratio * 100)}` }, h('div', null, h('b', null, score), h('span', null, `sur ${n}`))),
+    h('div', { class: 'stars', 'aria-label': `${stars} étoile${stars > 1 ? 's' : ''} sur 3` }, [0, 1, 2].map(i => h('span', { class: i < stars ? 'on' : '' }, '★'))),
+    h('p', { class: 'result-msg' }, msg),
+    record ? h('p', { class: 'record' }, '🏆 Nouveau meilleur score !') : null,
+    h('div', { class: 'result-btns' }, h('button', { class: 'btn', onclick: again }, 'Rejouer'), h('button', { class: 'btn alt', onclick: () => { V.g = null; render(); } }, 'Retour aux jeux'))),
     extra];
 }
 
@@ -864,14 +899,16 @@ function quizView() {
   };
   return [gameTop('Question', g.i, n, g.score),
     h('div', { class: 'card' },
+      h('div', { class: 'q-pill' }, `Question ${g.i + 1}`),
       h('h2', { class: 'quiz-q' }, x.q),
-      h('div', { class: 'opts' }, x.opts.map(o => h('button', {
+      h('div', { class: 'opts' }, x.opts.map((o, j) => h('button', {
         class: 'opt' + (answered && o === x.r[0] ? ' ok' : '') + (answered && o === g.pick && o !== x.r[0] ? ' ko' : ''),
         disabled: answered,
-        onclick: () => { g.pick = o; if (o === x.r[0]) g.score++; else g.missed.push(x); rerender(); } }, o))),
-      answered ? h('div', { class: 'feedback' },
+        onclick: () => { g.pick = o; if (o === x.r[0]) g.score++; else g.missed.push(x); rerender(); } },
+        h('span', { class: 'opt-l', 'aria-hidden': 'true' }, answered && o === x.r[0] ? '✓' : answered && o === g.pick ? '✗' : 'ABCD'[j]), h('span', null, o)))),
+      answered ? h('div', { class: 'feedback ' + (g.pick === x.r[0] ? 'fb-ok' : 'fb-ko') },
         h('p', { class: g.pick === x.r[0] ? 'ok-txt' : 'ko-txt' }, g.pick === x.r[0] ? '✓ Bonne réponse !' : `La bonne réponse : ${x.r[0]}`),
-        h('p', { class: 'small muted' }, `Voir ${x.ref}`, ' · ', contextBtn(x.ref)),
+        h('p', { class: 'small muted' }, `Référence : ${x.ref}`), contextBtn(x.ref),
         h('button', { class: 'btn block', onclick: next }, g.i + 1 < n ? 'Question suivante ›' : 'Voir le résultat')) : null)];
 }
 
@@ -986,11 +1023,11 @@ function gapView() {
   const nbWrong = it.marks ? it.marks.filter(m => !m).length : 0;
   return [gameTop('Verset', g.i, n, g.score),
     h('div', { class: 'card' },
-      h('div', { class: 'kicker' }, it.r),
+      h('div', { class: 'q-pill' }, it.r),
       text,
       it.done ? null : h('div', { class: 'wbank', 'aria-label': 'Mots proposés' }, it.chips.map(c => chipEl(it, c))),
       it.done
-        ? h('div', { class: 'feedback' },
+        ? h('div', { class: 'feedback ' + (it.won ? 'fb-ok' : 'fb-info') },
             h('p', { class: it.won ? 'ok-txt' : 'muted' }, it.won ? (it.tries ? '✓ C’est juste !' : '✓ Bravo, du premier coup !') : 'Voici le verset complet. Vous le retiendrez la prochaine fois !'),
             h('p', { class: 'small muted' }, contextBtn(it.r)),
             h('button', { class: 'btn block', onclick: next }, g.i + 1 < n ? 'Verset suivant ›' : 'Voir le résultat'))

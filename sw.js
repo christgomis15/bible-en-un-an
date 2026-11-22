@@ -1,5 +1,5 @@
 // Service worker : fonctionnement hors ligne (stale-while-revalidate) + notifications
-const CACHE = 'bible-an-v21';
+const CACHE = 'bible-an-v22';
 // Versions de la Bible téléchargées à la demande (Darby…) : cache à part, conservé d'une mise à jour à l'autre
 const VCACHE = 'bible-versions-v1';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'data/lsg.js', 'data/plan.js', 'data/versets.js', 'data/quiz.js', 'confidentialite.html', 'icons/icon-192.png', 'icons/icon-512.png', 'fonts/jakarta.woff2', 'fonts/inter.woff2', 'fonts/cormorant.woff2', 'fonts/cormorant-italic.woff2'];

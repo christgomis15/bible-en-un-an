@@ -397,3 +397,59 @@ body.selecting .chapbar{display:none}
 .wchip.used{opacity:.25;border-style:dashed;cursor:default}
 .wchip.dragging{opacity:.35}
 .wchip.ghost{position:fixed;z-index:60;pointer-events:none;transform:translate(-50%,-130%);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+
+/* Choix du verset (onglet Bible) */
+.tools .goto-v{margin-right:auto;font-weight:600;color:var(--brand)}
+.pick-sub{margin:14px 0 8px}
+
+/* Jeux : présentation plus chaleureuse */
+.games-hero{background:var(--hero);color:var(--hero-ink);border:0;position:relative;overflow:hidden;padding:20px 18px}
+html[data-theme="veillee"] .card.games-hero{background:var(--hero),#1b2250;border:1px solid rgba(217,183,112,.35)}
+.games-hero h2{font-family:var(--display);font-weight:var(--display-weight);font-size:1.6rem;margin:6px 0 4px;color:var(--hero-ink)}
+.games-hero p{margin:0;color:var(--hero-sub);font-size:.95rem}
+.games-hero .gh-count{margin-top:10px;color:var(--hero-ink);font-weight:600;font-size:.88rem}
+.gh-kicker{display:inline-block;background:rgba(255,255,255,.16);padding:3px 11px;border-radius:99px;font-size:.75rem;font-weight:600}
+html[data-theme="veillee"] .gh-kicker{background:none;padding:0;text-transform:uppercase;letter-spacing:.18em;font-size:.7rem;color:var(--gold)}
+.gh-deco{position:absolute;right:-6px;top:-22px;font-size:7rem;line-height:1;opacity:.12;pointer-events:none}
+.gc-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.gc-head h2{margin:2px 0 0;font-size:1.1rem}
+.gc-art{flex:none;width:58px;height:58px;border-radius:18px;display:flex;align-items:center;justify-content:center}
+.gc-art svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.gc-quiz .gc-art{background:linear-gradient(135deg,var(--coral-soft),var(--coral));color:#7a2f16}
+.gc-trous .gc-art{background:linear-gradient(135deg,#e3f0ff,#9cc3f5);color:#1d4f8f}
+html[data-theme="veillee"] .gc-art{background:linear-gradient(135deg,#34325a,#4a4272);color:var(--gold)}
+.gstats{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 2px}
+.gstat{font-size:.85rem;padding:5px 11px;border-radius:99px;background:var(--gold-soft);color:var(--ink)}
+.gstat.new{background:var(--coral-soft)}
+.btn.play{background:var(--cta);color:var(--cta-ink);border-color:transparent;font-weight:700;padding:13px}
+.game-top{padding:12px 16px}
+.gt-score b{color:var(--ink)}
+.gt-bar{height:8px}
+.gt-bar span{background:linear-gradient(90deg,var(--brand),var(--ok))}
+html[data-theme="veillee"] .gt-bar span{background:linear-gradient(90deg,#d9b770,#f0d699)}
+.q-pill{display:inline-block;font-size:.8rem;font-weight:700;letter-spacing:.04em;padding:4px 12px;border-radius:99px;background:var(--gold-soft);color:var(--brand);margin-bottom:6px}
+.opt{display:flex;align-items:center;gap:12px;transition:transform .12s,border-color .15s,background .15s}
+.opt:not(:disabled):active{transform:scale(.98)}
+.opt-l{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;background:var(--bg);color:var(--muted);border:1.5px solid var(--line)}
+.opt.ok .opt-l{background:var(--ok);border-color:var(--ok);color:#fff}
+.opt.ko .opt-l{background:var(--warn);border-color:var(--warn);color:#fff}
+.opt.ok{animation:pop .35s ease-out}
+.opt.ko{animation:shake .35s ease-out}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.feedback.fb-ok,.feedback.fb-ko,.feedback.fb-info{border-radius:14px;padding:10px 14px 14px;margin-top:14px}
+.fb-ok{background:color-mix(in srgb,var(--ok) 12%,var(--card))}
+.fb-ko{background:color-mix(in srgb,var(--warn) 11%,var(--card))}
+.fb-info{background:var(--gold-soft)}
+.result-card{padding:22px 18px}
+.score-ring{--p:0;width:150px;height:150px;margin:14px auto 8px;border-radius:50%;background:conic-gradient(var(--brand) calc(var(--p) * 1%),var(--line) 0);display:flex;align-items:center;justify-content:center}
+.score-ring>div{width:118px;height:118px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-ring b{font-family:var(--display);font-weight:var(--display-weight);font-size:2.8rem;line-height:1;color:var(--brand)}
+.score-ring span{font-size:.85rem;color:var(--muted)}
+html[data-theme="veillee"] .score-ring>div{background:#19204a}
+.stars{font-size:2rem;letter-spacing:6px;color:var(--line);margin:4px 0}
+.stars .on{color:#f2b636;display:inline-block;animation:pop .5s ease-out}
+.result-msg{font-size:1.05rem;font-weight:600;margin:6px 0}
+.record{display:inline-block;background:var(--coral-soft);padding:6px 14px;border-radius:99px;font-weight:700;margin:6px 0}
+.result-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+@media (prefers-reduced-motion:reduce){.opt.ok,.opt.ko,.stars .on{animation:none}}

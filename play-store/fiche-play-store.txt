@@ -24,7 +24,7 @@ Un verset d'encouragement s'affiche chaque heure. Si vous le souhaitez, recevez-
 Touchez un verset pour le surligner avec la couleur de votre choix, et donnez un nom à vos couleurs : « Mes combats », « Action de grâce », « Identité en Christ »… Retrouvez ensuite tous vos versets, classés par couleur.
 
 📚 TOUTE LA BIBLE
-Lisez n'importe quel livre et chapitre, cherchez un mot ou une référence (par exemple « Jean 3:16 »). Deux traductions sont incluses : Louis Segond 1910 et Darby 1885.
+Allez directement au livre, au chapitre et au verset de votre choix, cherchez un mot ou une référence (par exemple « Jean 3:16 »). Deux traductions sont incluses : Louis Segond 1910 et Darby 1885.
 
 🎮 APPRENDRE EN JOUANT
 • Un quiz biblique à choix multiples, sur l'Ancien ou le Nouveau Testament, avec la référence de chaque réponse.
@@ -52,6 +52,7 @@ Captures d'écran du téléphone (dans « captures ») :
   2-bible-veillee.png
   3-quiz.png
   4-versets-a-completer.png
+  5-jeux.png
 (Vous pouvez aussi utiliser les mêmes captures pour « Tablette 7 pouces » et « Tablette 10 pouces ».)
 
 ==================================================
