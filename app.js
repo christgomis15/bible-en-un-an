@@ -315,7 +315,7 @@ function hourCard() {
   const card = h('div', { class: 'card hour-verse' },
     h('div', { class: 'kicker' }, momentLabel()),
     h('blockquote', null, v.t),
-    h('div', { class: 'ref' }, v.r, contextBtn(v.r)),
+    h('div', { class: 'ref' }, v.r, h('div', { class: 'ref-acts' }, contextBtn(v.r), shareBtn(v))),
     h('p', { class: 'muted small' }, '« C’est de l’abondance du cœur que la bouche parle » (Luc 6:45). Remplissons notre cœur de la Parole de Dieu.'));
   return card;
 }
@@ -330,6 +330,131 @@ function scheduleHourRefresh() {
     scheduleHourRefresh();
   }, ms);
 }
+
+/* ---------- Partager un verset (WhatsApp, statut, story…) ---------- */
+const SITE = 'https://bible-en-un-an.vercel.app';
+const shareText = v => `« ${v.t} »\n— ${v.r} (${v.nom || 'Louis Segond'})\n\n🙏 Une parole de Dieu chaque jour avec l’appli gratuite « Bible en un an » : ${SITE}`;
+// Découpe un texte en lignes qui tiennent dans la largeur donnée
+function wrapLines(ctx, text, maxW) {
+  const out = []; let line = '';
+  for (const w of text.split(/[ \t\n]+/)) { // l'espace insécable ne coupe pas : « et » restent collés au texte
+    const t = line ? line + ' ' + w : w;
+    if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t;
+  }
+  if (line) out.push(line);
+  return out;
+}
+let shareIcon = null;
+function loadShareIcon() {
+  if (shareIcon) return shareIcon;
+  return shareIcon = new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = 'icons/icon-192.png'; });
+}
+// Image au format story (1080 × 1920) : style Jardin (vert) ou Veillée (nuit étoilée)
+async function verseImage(v, style) {
+  const W = 1080, H = 1920, nuit = style === 'veillee';
+  const fam = nuit ? '"Cormorant Garamond", Georgia, serif' : '"Plus Jakarta Sans", system-ui, sans-serif';
+  try { await Promise.all([document.fonts.load(`600 60px "Cormorant Garamond"`), document.fonts.load(`italic 600 60px "Cormorant Garamond"`), document.fonts.load(`700 60px "Plus Jakarta Sans"`)]); } catch (e) {}
+  const icon = await loadShareIcon();
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  // Fond
+  let g = c.createLinearGradient(0, 0, W * .4, H);
+  if (nuit) { g.addColorStop(0, '#2a3470'); g.addColorStop(.55, '#141a3a'); g.addColorStop(1, '#0d1128'); }
+  else { g.addColorStop(0, '#3f8a66'); g.addColorStop(.5, '#2f6b4f'); g.addColorStop(1, '#1d4433'); }
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const glow = c.createRadialGradient(W * .85, H * .12, 10, W * .85, H * .12, 700);
+  glow.addColorStop(0, nuit ? 'rgba(240,214,153,.28)' : 'rgba(255,255,255,.16)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = glow; c.fillRect(0, 0, W, H);
+  if (nuit) { // étoiles (toujours les mêmes)
+    let s = 7; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+    for (let i = 0; i < 90; i++) { c.globalAlpha = .25 + rnd() * .6; c.fillStyle = '#fff'; c.beginPath(); c.arc(rnd() * W, rnd() * H * .8, rnd() * 2.6 + .6, 0, 7); c.fill(); }
+    c.globalAlpha = 1;
+  }
+  const ink = nuit ? '#fbf4e4' : '#ffffff', accent = nuit ? '#e3c27f' : '#c9ecd3';
+  // Grand guillemet décoratif
+  c.fillStyle = nuit ? 'rgba(217,183,112,.22)' : 'rgba(255,255,255,.14)';
+  c.font = `700 360px ${fam}`; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+  c.fillText('“', 70, 480);
+  // Petit titre
+  c.fillStyle = accent; c.textAlign = 'center';
+  c.font = `700 34px "Plus Jakarta Sans", system-ui, sans-serif`;
+  if ('letterSpacing' in c) c.letterSpacing = '6px';
+  c.fillText('PAROLE DE DIEU', W / 2, 300);
+  if ('letterSpacing' in c) c.letterSpacing = '0px';
+  // Verset : taille ajustée pour tenir dans la zone
+  const maxW = 860, zoneTop = 380, zoneH = 1040;
+  let size = 84, lines, lh;
+  for (; size >= 34; size -= 2) {
+    c.font = nuit ? `italic 600 ${size}px ${fam}` : `700 ${size}px ${fam}`;
+    lines = wrapLines(c, `« ${v.t.trim()} »`, maxW); lh = size * (nuit ? 1.3 : 1.36);
+    if (lines.length * lh <= zoneH) break;
+  }
+  const refSize = Math.max(38, Math.min(54, size * .7));
+  const block = lines.length * lh + 70 + refSize;
+  let y = zoneTop + Math.max(0, (zoneH - block) / 2) + size;
+  c.fillStyle = ink;
+  for (const l of lines) { c.fillText(l, W / 2, y); y += lh; }
+  // Référence
+  c.fillStyle = accent; c.font = `700 ${refSize}px "Plus Jakarta Sans", system-ui, sans-serif`;
+  c.fillText(v.r, W / 2, y - lh + 70 + refSize);
+  // Pied : l'appli
+  const by = 1560, bw = 860, bx = (W - bw) / 2, bh = 200;
+  c.fillStyle = nuit ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.12)';
+  c.beginPath(); c.roundRect ? c.roundRect(bx, by, bw, bh, 40) : c.rect(bx, by, bw, bh); c.fill();
+  if (icon) { c.save(); c.beginPath(); c.roundRect ? c.roundRect(bx + 36, by + 40, 120, 120, 30) : c.rect(bx + 36, by + 40, 120, 120); c.clip(); c.drawImage(icon, bx + 36, by + 40, 120, 120); c.restore(); }
+  c.textAlign = 'left'; c.fillStyle = ink;
+  c.font = `800 50px "Plus Jakarta Sans", system-ui, sans-serif`; c.fillText('Bible en un an', bx + 190, by + 92);
+  c.fillStyle = accent; c.font = `600 32px "Plus Jakarta Sans", system-ui, sans-serif`;
+  c.fillText('Appli gratuite · bible-en-un-an.vercel.app', bx + 190, by + 146);
+  return new Promise(res => cv.toBlob(res, 'image/png'));
+}
+// Fenêtre de partage : aperçu de l'image + WhatsApp, image (statut / story), autres applis
+const shareBack = h('div', { class: 'bubble-back share-back', hidden: true, onclick: e => { if (e.target === shareBack) closeShare(); } },
+  h('div', { class: 'bubble share-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Partager ce verset' }));
+let shareUrl = null;
+function closeShare() { shareBack.hidden = true; if (shareUrl) { URL.revokeObjectURL(shareUrl); shareUrl = null; } }
+async function openShare(v) {
+  if (!shareBack.isConnected) document.body.append(shareBack);
+  let style = document.documentElement.getAttribute('data-theme') === 'veillee' ? 'veillee' : 'jardin', blob = null;
+  const box = shareBack.firstChild, img = h('img', { class: 'share-prev', alt: `Image du verset ${v.r}` });
+  const msg = h('p', { class: 'small muted share-msg' });
+  const file = () => new File([blob], `verset-${v.r.replace(/[^\p{L}\d]+/gu, '-')}.png`, { type: 'image/png' });
+  const draw = async () => {
+    img.style.opacity = '.4';
+    blob = await verseImage(v, style);
+    if (shareUrl) URL.revokeObjectURL(shareUrl);
+    shareUrl = URL.createObjectURL(blob); img.src = shareUrl; img.style.opacity = '1';
+  };
+  const styles = h('div', { class: 'seg' }, [['jardin', 'Jardin'], ['veillee', 'Veillée']].map(([id, nom]) => h('button', {
+    class: style === id ? 'on' : '', onclick: e => { style = id; [...styles.children].forEach(b => b.classList.toggle('on', b === e.currentTarget)); draw(); } }, nom)));
+  const shareImg = async () => {
+    if (!blob) return;
+    const f = file();
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      try { await navigator.share({ files: [f], text: `${v.r} · ${SITE}` }); } catch (e) {}
+    } else {
+      downloadBlob(f.name, 'image/png', blob);
+      msg.textContent = 'Image enregistrée : ajoutez-la à votre statut WhatsApp ou à votre story depuis vos photos.';
+    }
+  };
+  const shareWa = () => { window.open('https://wa.me/?text=' + encodeURIComponent(shareText(v)), '_blank', 'noopener'); };
+  const shareOther = async () => {
+    const txt = shareText(v);
+    if (navigator.share) { try { await navigator.share({ text: txt }); } catch (e) {} return; }
+    try { await navigator.clipboard.writeText(txt); msg.textContent = 'Texte copié : collez-le où vous voulez.'; } catch (e) { prompt('Copiez le texte :', txt); }
+  };
+  box.replaceChildren(
+    h('div', { class: 'picker-head' }, h('div', { class: 'kicker' }, 'Partager ce verset'), h('button', { class: 'sel-link', onclick: closeShare }, 'Fermer')),
+    img, styles,
+    h('button', { class: 'btn block share-wa', onclick: shareWa }, 'Envoyer sur WhatsApp'),
+    h('button', { class: 'btn block alt', onclick: shareImg }, 'Partager l’image (statut, story…)'),
+    h('button', { class: 'btn block alt', onclick: shareOther }, 'Autres applications…'),
+    msg);
+  shareBack.hidden = false;
+  await draw();
+}
+const shareBtn = (v, before) => h('button', { class: 'share-link', onclick: () => { if (before) before(); openShare(v); } }, '↗ Partager');
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !shareBack.hidden) closeShare(); });
 
 /* Bulle « Parole de l'heure » : bouton flottant visible sur toutes les pages,
    qui s'ouvre tout seul la première fois que l'appli est ouverte dans l'heure
@@ -347,7 +472,7 @@ function fillBubble() {
   bubble.firstChild.replaceChildren(
     h('div', { class: 'kicker', id: 'bubble-k' }, momentLabel()),
     h('blockquote', null, v.t),
-    h('div', { class: 'ref' }, v.r, contextBtn(v.r, () => { bubble.hidden = true; })),
+    h('div', { class: 'ref' }, v.r, h('div', { class: 'ref-acts' }, contextBtn(v.r, () => { bubble.hidden = true; }), shareBtn(v, () => { bubble.hidden = true; }))),
     h('p', { class: 'muted small' }, `Gardez cette parole dans votre cœur : un nouveau verset vous attend ${nx.demain ? 'demain ' : ''}à ${pad(nx.h)} h.`),
     h('button', { class: 'btn', onclick: closeBubble }, 'Amen'));
 }
@@ -616,8 +741,9 @@ function copySel() {
 const selRef = h('span', { class: 'sel-ref' });
 const selColors = h('div', { class: 'sel-colors' });
 const copyBtn = h('button', { class: 'sel-act', onclick: copySel }, 'Copier');
+const shareSelBtn = h('button', { class: 'sel-act', onclick: () => { const ks = selOrdered(); if (!ks.length) return; openShare({ t: ks.map(k => refOf(k).txt).join(' '), r: refLabel(ks), nom: VERSIONS[ver()].nom }); } }, 'Partager');
 const selBar = h('div', { class: 'selbar', hidden: true, role: 'toolbar', 'aria-label': 'Surligner les versets sélectionnés' },
-  h('div', { class: 'sel-top' }, h('button', { class: 'sel-link', onclick: clearSel }, 'Annuler'), selRef, copyBtn),
+  h('div', { class: 'sel-top' }, h('button', { class: 'sel-link', onclick: clearSel }, 'Annuler'), selRef, shareSelBtn, copyBtn),
   selColors);
 function updateSelBar() {
   const k = V.sel.size;

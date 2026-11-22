@@ -454,3 +454,19 @@ html[data-theme="veillee"] .score-ring>div{background:#19204a}
 .result-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
 @media (prefers-reduced-motion:reduce){.opt.ok,.opt.ko,.stars .on{animation:none}}
 .card select{min-width:110px;display:block;margin:4px 0 6px}
+
+/* Partager un verset */
+.ref-acts{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px}
+.ref-acts .ctx-link{margin:0}
+html[data-theme="veillee"] .hour-verse .ref-acts{justify-content:center}
+.share-link{border:0;font:inherit;font-size:.85rem;font-weight:700;padding:5px 12px;border-radius:99px;cursor:pointer;background:var(--gold-soft);color:var(--brand);-webkit-tap-highlight-color:transparent}
+.hour-verse .share-link{background:rgba(255,255,255,.18);color:var(--hero-ink)}
+html[data-theme="veillee"] .hour-verse .share-link{background:rgba(217,183,112,.18);color:var(--gold)}
+.share-back{z-index:30}
+.share-sheet{max-height:calc(100vh - 32px);overflow:auto}
+.share-sheet .picker-head{margin-bottom:4px}
+.share-prev{display:block;height:min(44vh,420px);aspect-ratio:9/16;max-width:100%;object-fit:contain;margin:8px auto 10px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);background:var(--line);transition:opacity .2s}
+.share-sheet .seg{margin:0 0 4px}
+.share-sheet .btn.block{margin-top:8px}
+.btn.share-wa{background:#25d366;color:#06361b}
+.share-msg:empty{display:none}
