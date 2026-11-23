@@ -350,6 +350,260 @@ function loadShareIcon() {
   return shareIcon = new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = 'icons/icon-192.png'; });
 }
 // Image au format story (1080 × 1920) : style Jardin (vert) ou Veillée (nuit étoilée)
+/* --- Décors supplémentaires pour l'image d'un verset (inspirés des visuels choisis par l'utilisateur) --- */
+const SERIF = '"Cormorant Garamond", Georgia, serif', SANS = '"Plus Jakarta Sans", system-ui, sans-serif', SCRIPT = '"Great Vibes", "Cormorant Garamond", cursive';
+function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const spacing = (c, x) => { if ('letterSpacing' in c) c.letterSpacing = x; };
+// Taille de texte la plus grande qui tient dans la largeur et la hauteur données
+function fitText(c, text, font, maxW, maxH, from, to, lhk) {
+  let size = from, lines, lh;
+  for (; size >= to; size -= 2) { c.font = font(size); lines = wrapLines(c, text, maxW); lh = size * lhk; if (lines.length * lh <= maxH) break; }
+  return { size, lines, lh, h: lines.length * lh };
+}
+// Signature de l'appli (icône + nom + adresse), centrée
+function brandMark(c, y, icon, light) {
+  const W = 1080;
+  c.save(); c.textAlign = 'left'; c.font = `700 34px ${SANS}`;
+  const w1 = c.measureText('Bible en un an').width; c.font = `500 25px ${SANS}`;
+  const w2 = c.measureText('Appli gratuite · bible-en-un-an.vercel.app').width;
+  const tw = 56 + 18 + Math.max(w1, w2), x = (W - tw) / 2;
+  if (light) { c.fillStyle = 'rgba(20,12,6,.42)'; c.beginPath(); c.roundRect ? c.roundRect(x - 26, y - 46, tw + 52, 100, 28) : c.rect(x - 26, y - 46, tw + 52, 100); c.fill(); }
+  if (icon) { c.save(); c.beginPath(); c.roundRect ? c.roundRect(x, y - 28, 56, 56, 14) : c.rect(x, y - 28, 56, 56); c.clip(); c.drawImage(icon, x, y - 28, 56, 56); c.restore(); }
+  c.fillStyle = light ? '#fff8ec' : '#3d2f24'; c.font = `700 34px ${SANS}`; c.fillText('Bible en un an', x + 74, y);
+  c.fillStyle = light ? 'rgba(255,240,215,.85)' : '#7d6a5a'; c.font = `500 25px ${SANS}`; c.fillText('Appli gratuite · bible-en-un-an.vercel.app', x + 74, y + 30);
+  c.restore();
+}
+// Filet orné : deux traits et un petit motif au centre
+function filet(c, y, color, w = 200, motif = 'losange') {
+  const W = 1080; c.save(); c.strokeStyle = color; c.fillStyle = color; c.lineWidth = 2.5;
+  c.beginPath(); c.moveTo(W / 2 - w, y); c.lineTo(W / 2 - 22, y); c.moveTo(W / 2 + 22, y); c.lineTo(W / 2 + w, y); c.stroke();
+  c.translate(W / 2, y);
+  if (motif === 'coeur') { c.beginPath(); c.moveTo(0, 12); c.bezierCurveTo(-20, -2, -12, -16, 0, -5); c.bezierCurveTo(12, -16, 20, -2, 0, 12); c.fill(); }
+  else if (motif === 'anneaux') { c.lineWidth = 2.5; c.beginPath(); c.arc(-14, 0, 5, 0, 7); c.stroke(); c.beginPath(); c.arc(14, 0, 5, 0, 7); c.stroke(); c.beginPath(); c.ellipse(0, 0, 4, 9, 0, 0, 7); c.fill(); }
+  else { c.rotate(Math.PI / 4); c.fillRect(-6, -6, 12, 12); }
+  c.restore();
+}
+// Rameau de feuilles (olivier) : tige + feuilles allongées
+function rameau(c, x, y, ang, len, col, rnd, blur = 0, alpha = 1) {
+  c.save(); if (blur) c.filter = `blur(${blur}px)`; c.globalAlpha = alpha; c.translate(x, y); c.rotate(ang);
+  c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 5; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(len / 2, -len * .06, len, 0); c.stroke();
+  for (let i = 1; i < 9; i++) { const t = i / 9; c.save(); c.translate(len * t, -len * .03 * Math.sin(t * Math.PI)); c.rotate((i % 2 ? 1 : -1) * (.55 + rnd() * .25)); c.beginPath(); c.ellipse(42, 0, 46, 13, 0, 0, 7); c.fill(); c.restore(); }
+  c.restore();
+}
+
+// 1. Éclat : la page s'illumine (fond sombre et doré, gerbe de lumière, étincelles)
+function drawEclat(c, v, icon, rnd) {
+  const W = 1080, H = 1920;
+  let g = c.createRadialGradient(540, 860, 40, 540, 900, 1300);
+  g.addColorStop(0, '#8a5a2b'); g.addColorStop(.35, '#4a2e17'); g.addColorStop(1, '#120a05');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // Rayons venus d'en haut à gauche
+  c.save(); c.globalCompositeOperation = 'lighter'; c.filter = 'blur(30px)';
+  for (let i = 0; i < 5; i++) { c.save(); c.translate(150 + i * 90, -100); c.rotate(-.55 + i * .06); c.fillStyle = `rgba(255,214,150,${.06 + rnd() * .05})`; c.fillRect(-40, 0, 80 + rnd() * 60, 1400); c.restore(); }
+  c.restore();
+  // Texte du verset, mis en page pour savoir quelle zone éclairer
+  const T = fitText(c, v.t.trim(), s => `600 ${s}px ${SERIF}`, 780, 640, 84, 34, 1.24);
+  const refS = 46, blockH = T.h + 60 + 30 + refS, cy = 900, top = cy - blockH / 2;
+  // Page de livre (papier ancien) en perspective
+  c.save(); c.beginPath(); c.moveTo(-60, 420); c.bezierCurveTo(300, 360, 780, 360, 1140, 430); c.lineTo(1140, 1450); c.bezierCurveTo(760, 1400, 320, 1400, -60, 1460); c.closePath();
+  const pg = c.createLinearGradient(0, 400, 0, 1460); pg.addColorStop(0, '#6b4c2c'); pg.addColorStop(.5, '#c9a878'); pg.addColorStop(1, '#5e4126');
+  c.fillStyle = pg; c.fill(); c.clip();
+  // Lignes de texte floues sur la page
+  c.filter = 'blur(4px)'; c.fillStyle = 'rgba(40,25,12,.42)';
+  for (let row = 0; row < 26; row++) { const y = 470 + row * 38; let x = 60 + rnd() * 30; while (x < 1020) { const w = 30 + rnd() * 110; c.fillRect(x, y, w, 12); x += w + 14 + rnd() * 10; } }
+  c.restore();
+  // Halo central (la zone du verset devient lumineuse)
+  const rx = Math.max(...T.lines.map(l => { c.font = `600 ${T.size}px ${SERIF}`; return c.measureText(l).width; })) / 2 + 170, ry = blockH / 2 + 190;
+  c.save(); c.translate(540, cy); c.scale(rx / ry, 1);
+  let halo = c.createRadialGradient(0, 0, 10, 0, 0, ry);
+  halo.addColorStop(0, 'rgba(255,248,228,1)'); halo.addColorStop(.55, 'rgba(255,236,196,.95)'); halo.addColorStop(.8, 'rgba(255,200,120,.45)'); halo.addColorStop(1, 'rgba(255,180,90,0)');
+  c.fillStyle = halo; c.beginPath(); c.arc(0, 0, ry, 0, 7); c.fill(); c.restore();
+  // Gerbe d'étincelles au-dessus du verset
+  c.save(); c.globalCompositeOperation = 'lighter';
+  const sx = 640, sy = top - 30;
+  for (let i = 0; i < 70; i++) {
+    const a = -Math.PI / 2 + (rnd() - .5) * 2.2, l = 80 + rnd() * 380;
+    const lg = c.createLinearGradient(sx, sy, sx + Math.cos(a) * l, sy + Math.sin(a) * l);
+    lg.addColorStop(0, 'rgba(255,230,170,.9)'); lg.addColorStop(1, 'rgba(255,180,80,0)');
+    c.strokeStyle = lg; c.lineWidth = .8 + rnd() * 2; c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx + Math.cos(a) * l, sy + Math.sin(a) * l); c.stroke();
+  }
+  for (let i = 0; i < 220; i++) {
+    const a = rnd() * Math.PI * 2, d = 40 + Math.pow(rnd(), .6) * 620, x = sx + Math.cos(a) * d, y = sy + Math.sin(a) * d * .75 - rnd() * 200;
+    const r = rnd() * 4 + .6; const p = c.createRadialGradient(x, y, 0, x, y, r * 3);
+    p.addColorStop(0, `rgba(255,226,160,${.4 + rnd() * .6})`); p.addColorStop(1, 'rgba(255,190,90,0)');
+    c.fillStyle = p; c.beginPath(); c.arc(x, y, r * 3, 0, 7); c.fill();
+  }
+  const core = c.createRadialGradient(sx, sy, 0, sx, sy, 120); core.addColorStop(0, 'rgba(255,255,240,.95)'); core.addColorStop(1, 'rgba(255,200,100,0)');
+  c.fillStyle = core; c.beginPath(); c.arc(sx, sy, 120, 0, 7); c.fill();
+  c.restore();
+  // Tranche du livre, table et reflet
+  c.fillStyle = '#2a1a0e'; c.beginPath(); c.moveTo(-60, 1460); c.bezierCurveTo(320, 1400, 760, 1400, 1140, 1450); c.lineTo(1140, 1560); c.bezierCurveTo(700, 1520, 380, 1520, -60, 1570); c.fill();
+  const tb = c.createLinearGradient(0, 1540, 0, H); tb.addColorStop(0, '#3a2414'); tb.addColorStop(1, '#0d0704'); c.fillStyle = tb; c.fillRect(0, 1555, W, H - 1555);
+  c.save(); c.globalCompositeOperation = 'lighter'; c.filter = 'blur(10px)';
+  for (let i = 0; i < 9; i++) { c.fillStyle = `rgba(255,190,90,${.5 - i * .05})`; c.beginPath(); c.ellipse(560 + (rnd() - .5) * 30, 1600 + i * 34, 26 - i * 1.5, 10, 0, 0, 7); c.fill(); }
+  const star = c.createRadialGradient(560, 1500, 0, 560, 1500, 90); star.addColorStop(0, 'rgba(255,240,200,.9)'); star.addColorStop(1, 'rgba(255,170,60,0)'); c.fillStyle = star; c.filter = 'none'; c.beginPath(); c.arc(560, 1500, 90, 0, 7); c.fill();
+  c.restore();
+  // Feuilles d'olivier sombres (premier plan, floues)
+  rameau(c, -30, 520, .25, 420, '#3c4a2c', rnd, 4, .9);
+  rameau(c, -40, 1720, -.25, 520, '#46553a', rnd, 7, .85);
+  // Verset
+  c.textAlign = 'center'; c.fillStyle = '#2b1a0e';
+  let y = top + T.size * .85;
+  c.font = `600 ${T.size}px ${SERIF}`;
+  for (const l of T.lines) { c.fillText(l, 540, y); y += T.lh; }
+  // Laurier rouge et référence
+  const ly = y - T.lh + 55;
+  filet(c, ly, '#8e2a26', 170, 'coeur');
+  c.fillStyle = '#2b1a0e'; c.font = `500 ${refS - 4}px Georgia, "Times New Roman", serif`; c.fillText(`— ${v.r} —`, 540, ly + 30 + refS);
+  brandMark(c, 1760, icon, true);
+}
+
+// 2. Page surlignée : gros plan sur une page imprimée, passage surligné au feutre jaune
+function drawPage(c, v, icon, rnd) {
+  const W = 1080, H = 1920;
+  let g = c.createLinearGradient(0, 0, W, 0); g.addColorStop(0, '#d9d3c6'); g.addColorStop(.12, '#efebe2'); g.addColorStop(.7, '#f5f2ea'); g.addColorStop(1, '#e6e1d6');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const vg = c.createRadialGradient(540, 960, 400, 540, 960, 1250); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(60,50,35,.28)');
+  c.fillStyle = vg; c.fillRect(0, 0, W, H);
+  // Texte imprimé flou au-dessus et au-dessous
+  const mots = 'et il dit à ses disciples car voici que je vous le dis en vérité le Seigneur est ma lumière et mon salut de qui aurais-je crainte heureux celui qui marche dans la loi de l Éternel'.split(' ');
+  const faux = (y0, y1, blur) => {
+    c.save(); c.filter = `blur(${blur}px)`; c.fillStyle = 'rgba(30,28,24,.75)'; c.font = `500 40px Georgia, serif`; c.textAlign = 'left';
+    for (let y = y0; y < y1; y += 58) { let line = ''; while (c.measureText(line).width < 1000) line += mots[Math.floor(rnd() * mots.length)] + ' '; c.fillText(line, 40 + rnd() * 20, y); }
+    c.restore();
+  };
+  // Mise en page du passage
+  c.textAlign = 'center';
+  const T = fitText(c, v.t.trim(), s => `500 ${s}px Georgia, "Times New Roman", serif`, 900, 760, 64, 32, 1.32);
+  const refS = 112, blockH = refS + 50 + T.h, top = 960 - blockH / 2;
+  faux(60, top - 60, 6); faux(top + blockH + 110, 1700, 7.5);
+  // Référence en très grand
+  c.fillStyle = '#111'; c.font = `700 ${refS}px Georgia, "Times New Roman", serif`; c.fillText(v.r, 540, top + refS * .8);
+  // Verset, avec surlignage jaune sur le milieu du passage
+  c.font = `500 ${T.size}px Georgia, "Times New Roman", serif`;
+  const n = T.lines.length, a = n < 3 ? 0 : Math.floor(n * .34), b = n < 3 ? n - 1 : Math.max(a, Math.ceil(n * .66) - 1);
+  let y = top + refS + 50 + T.size * .85;
+  T.lines.forEach((l, i) => {
+    if (i >= a && i <= b) {
+      const w = c.measureText(l).width; c.save(); c.fillStyle = 'rgba(250,240,40,.78)'; c.translate(540, y - T.size * .32); c.rotate(-.006 + (rnd() - .5) * .006);
+      c.beginPath(); c.roundRect ? c.roundRect(-w / 2 - 12, -T.size * .5, w + 24, T.size * .92, 6) : c.rect(-w / 2 - 12, -T.size * .5, w + 24, T.size * .92); c.fill(); c.restore();
+    }
+    c.fillStyle = '#141414'; c.fillText(l, 540, y); y += T.lh;
+  });
+  // Ombre de la reliure à gauche
+  const sp = c.createLinearGradient(0, 0, 90, 0); sp.addColorStop(0, 'rgba(60,50,35,.35)'); sp.addColorStop(1, 'rgba(60,50,35,0)'); c.fillStyle = sp; c.fillRect(0, 0, 90, H);
+  const bas = c.createLinearGradient(0, 1620, 0, 1760); bas.addColorStop(0, 'rgba(242,238,229,0)'); bas.addColorStop(1, 'rgba(242,238,229,.96)'); c.fillStyle = bas; c.fillRect(0, 1620, W, 300);
+  brandMark(c, 1790, icon, false);
+}
+
+// Montagnes en couches (lignes de crête irrégulières)
+function crete(c, base, amp, col, rnd, W = 1080, H = 1920) {
+  const f = [rnd() * 6, rnd() * 6, rnd() * 6], k = [.004 + rnd() * .003, .011 + rnd() * .006, .03 + rnd() * .01];
+  c.beginPath(); c.moveTo(0, H);
+  for (let x = 0; x <= W; x += 8) c.lineTo(x, base - amp * (Math.sin(x * k[0] + f[0]) * .6 + Math.sin(x * k[1] + f[1]) * .3 + Math.sin(x * k[2] + f[2]) * .1));
+  c.lineTo(W, H); c.closePath(); c.fillStyle = col; c.fill();
+}
+// Nuages doux (amas d'ellipses floues)
+function nuages(c, rnd, y0, y1, colTop, colBot, n = 7) {
+  c.save(); c.filter = 'blur(22px)';
+  for (let i = 0; i < n; i++) {
+    const x = rnd() * 1080, y = y0 + rnd() * (y1 - y0), w = 160 + rnd() * 260;
+    for (let j = 0; j < 6; j++) { const g = c.createLinearGradient(0, y - 60, 0, y + 60); g.addColorStop(0, colTop); g.addColorStop(1, colBot); c.fillStyle = g; c.beginPath(); c.ellipse(x + (rnd() - .5) * w, y + (rnd() - .5) * 40, w * (.3 + rnd() * .3), 30 + rnd() * 30, 0, 0, 7); c.fill(); }
+  }
+  c.restore();
+}
+
+// 3. Montagnes : lever de soleil sur les montagnes, sentier de pierres
+function drawMontagne(c, v, icon, rnd) {
+  const W = 1080, H = 1920;
+  let g = c.createLinearGradient(0, 0, 0, 1300);
+  g.addColorStop(0, '#8fa9c6'); g.addColorStop(.35, '#cdd3d6'); g.addColorStop(.7, '#f3dcb6'); g.addColorStop(1, '#f6b867');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  nuages(c, rnd, 80, 700, 'rgba(255,250,240,.75)', 'rgba(240,190,140,.55)', 8);
+  const sun = c.createRadialGradient(930, 1230, 10, 930, 1230, 520); sun.addColorStop(0, 'rgba(255,252,230,1)'); sun.addColorStop(.12, 'rgba(255,230,160,.95)'); sun.addColorStop(1, 'rgba(255,190,100,0)');
+  c.fillStyle = sun; c.fillRect(0, 0, W, H);
+  crete(c, 1250, 90, '#d9b393', rnd); crete(c, 1330, 120, '#b98f72', rnd);
+  const brume = c.createLinearGradient(0, 1180, 0, 1620); brume.addColorStop(0, 'rgba(250,215,170,0)'); brume.addColorStop(.55, 'rgba(250,215,170,.5)'); brume.addColorStop(1, 'rgba(250,215,170,0)'); c.fillStyle = brume; c.fillRect(0, 1180, W, 440);
+  crete(c, 1440, 140, '#8a6a55', rnd); crete(c, 1560, 160, '#5d4a3c', rnd);
+  // Sentier de pierres au premier plan
+  c.fillStyle = '#3e3328'; c.beginPath(); c.moveTo(0, 1640); c.quadraticCurveTo(540, 1580, 1080, 1660); c.lineTo(1080, H); c.lineTo(0, H); c.fill();
+  c.save(); c.beginPath(); c.moveTo(380, 1640); c.lineTo(640, 1630); c.lineTo(900, H); c.lineTo(80, H); c.closePath(); c.clip();
+  const pth = c.createLinearGradient(0, 1630, 0, H); pth.addColorStop(0, '#a58c70'); pth.addColorStop(1, '#6f5c49'); c.fillStyle = pth; c.fillRect(0, 1600, W, 400);
+  for (let i = 0; i < 70; i++) { const y = 1650 + Math.pow(rnd(), .8) * 280, s = 10 + (y - 1640) * .18; const px = 80 + rnd() * 820, rx = s * (1 + rnd()), ry = s * .5; c.fillStyle = 'rgba(40,30,20,.35)'; c.beginPath(); c.ellipse(px + 3, y + 4, rx, ry, 0, 0, 7); c.fill(); c.fillStyle = `hsl(32, ${10 + rnd() * 10}%, ${52 + rnd() * 22}%)`; c.beginPath(); c.ellipse(px, y, rx, ry, 0, 0, 7); c.fill(); }
+  c.restore();
+  // Herbes
+  c.strokeStyle = 'rgba(70,80,40,.8)'; c.lineWidth = 3;
+  for (let i = 0; i < 90; i++) { const x = rnd() < .5 ? rnd() * 330 : 760 + rnd() * 320, y = 1650 + rnd() * 120; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + (rnd() - .5) * 20, y - 30, x + (rnd() - .5) * 40, y - 50 - rnd() * 40); c.stroke(); }
+  // Verset (bleu nuit, classique)
+  c.textAlign = 'center';
+  const T = fitText(c, v.t.trim(), s => `700 ${s}px ${SERIF}`, 860, 700, 92, 36, 1.2);
+  const top = 230 + Math.max(0, (720 - T.h) / 2);
+  c.fillStyle = '#1b2840'; c.font = `700 ${T.size}px ${SERIF}`;
+  c.save(); c.shadowColor = 'rgba(255,250,235,.7)'; c.shadowBlur = 18;
+  let y = top + T.size * .85; for (const l of T.lines) { c.fillText(l, 540, y); y += T.lh; }
+  c.restore();
+  const fy = y - T.lh + 70; filet(c, fy, '#6b4a33', 180, 'anneaux');
+  c.fillStyle = '#2b2a2a'; c.font = `500 44px Georgia, "Times New Roman", serif`; c.fillText(v.r, 540, fy + 70);
+  c.font = `500 34px ${SERIF}`; c.fillText(`(Version ${v.nom || 'Louis Segond'})`, 540, fy + 112);
+  brandMark(c, 1830, icon, true);
+}
+
+// 4. Lac : coucher de soleil sur un lac, falaises, ponton et lanterne
+function drawLac(c, v, icon, rnd) {
+  const W = 1080, H = 1920, hz = 1080;
+  let g = c.createLinearGradient(0, 0, 0, hz);
+  g.addColorStop(0, '#e9d3bb'); g.addColorStop(.5, '#f5dcb7'); g.addColorStop(1, '#f5b46a');
+  c.fillStyle = g; c.fillRect(0, 0, W, hz);
+  nuages(c, rnd, 40, 560, 'rgba(255,245,230,.7)', 'rgba(190,140,110,.5)', 9);
+  const sun = c.createRadialGradient(780, hz - 40, 5, 780, hz - 40, 480); sun.addColorStop(0, 'rgba(255,253,235,1)'); sun.addColorStop(.1, 'rgba(255,236,180,.95)'); sun.addColorStop(1, 'rgba(255,200,120,0)');
+  c.fillStyle = sun; c.fillRect(0, 0, W, hz + 60);
+  // Falaises à gauche et à droite
+  const falaise = (pts, col) => { c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (const [x, y] of pts.slice(1)) c.lineTo(x + (rnd() - .5) * 10, y + (rnd() - .5) * 10); c.closePath(); c.fillStyle = col; c.fill(); };
+  const fg = c.createLinearGradient(0, 300, 0, hz); fg.addColorStop(0, '#6e4a33'); fg.addColorStop(1, '#3d2a1e');
+  falaise([[0, hz], [0, 560], [60, 520], [120, 600], [170, 730], [215, 880], [270, hz]], fg);
+  falaise([[W, hz], [W, 720], [1010, 690], [955, 790], [905, 920], [860, hz]], fg);
+  c.save(); c.globalAlpha = .55; falaise([[420, hz], [470, 990], [560, 1010], [640, 975], [720, hz]], '#b98a68'); c.restore();
+  const haze = c.createLinearGradient(0, 800, 0, hz); haze.addColorStop(0, 'rgba(255,220,170,0)'); haze.addColorStop(1, 'rgba(255,220,170,.55)'); c.fillStyle = haze; c.fillRect(0, 800, W, hz - 800);
+  // Eau et reflet du soleil
+  const wg = c.createLinearGradient(0, hz, 0, H); wg.addColorStop(0, '#e2a467'); wg.addColorStop(.4, '#8a6448'); wg.addColorStop(1, '#3a2a20'); c.fillStyle = wg; c.fillRect(0, hz, W, H - hz);
+  c.save(); c.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 160; i++) { const y = hz + Math.pow(rnd(), 1.3) * 760, spread = 30 + (y - hz) * .25, x = 780 + (rnd() - .5) * spread * 2; c.fillStyle = `rgba(255,220,150,${.15 + rnd() * .35})`; c.fillRect(x, y, 20 + rnd() * 60, 3 + rnd() * 3); }
+  c.restore();
+  c.strokeStyle = 'rgba(255,230,190,.12)'; c.lineWidth = 2; for (let y = hz + 20; y < H; y += 26 + rnd() * 20) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y + (rnd() - .5) * 6); c.stroke(); }
+  // Ponton en bois
+  c.save(); c.beginPath(); c.moveTo(330, H); c.lineTo(W, 1480); c.lineTo(W, H); c.closePath(); c.clip();
+  const pt = c.createLinearGradient(330, H, W, 1480); pt.addColorStop(0, '#6a4a30'); pt.addColorStop(1, '#9b744f'); c.fillStyle = pt; c.fillRect(0, 1400, W, 600);
+  c.strokeStyle = 'rgba(40,25,15,.6)'; c.lineWidth = 4; for (let i = 1; i < 9; i++) { const t = i / 9; c.beginPath(); c.moveTo(330 + (W - 330) * t, H); c.lineTo(W, H - (H - 1480) * (1 - t) - 30 * t); c.stroke(); }
+  c.restore();
+  // Lanterne allumée sur le ponton
+  const lx = 900, ly = 1620;
+  c.save(); c.globalCompositeOperation = 'lighter'; const lg = c.createRadialGradient(lx, ly, 0, lx, ly, 220); lg.addColorStop(0, 'rgba(255,200,110,.55)'); lg.addColorStop(1, 'rgba(255,160,60,0)'); c.fillStyle = lg; c.beginPath(); c.arc(lx, ly, 220, 0, 7); c.fill(); c.restore();
+  c.fillStyle = 'rgba(255,226,160,.95)'; c.fillRect(lx - 45, ly - 70, 90, 130);
+  c.fillStyle = '#fff6e0'; c.fillRect(lx - 14, ly - 10, 28, 60); c.fillStyle = '#ffcf6a'; c.beginPath(); c.ellipse(lx, ly - 24, 8, 16, 0, 0, 7); c.fill();
+  c.strokeStyle = '#1c1612'; c.lineWidth = 8; c.strokeRect(lx - 45, ly - 70, 90, 130);
+  c.beginPath(); c.moveTo(lx, ly - 70); c.lineTo(lx, ly + 60); c.stroke();
+  c.fillStyle = '#1c1612'; c.beginPath(); c.moveTo(lx - 65, ly - 70); c.lineTo(lx, ly - 120); c.lineTo(lx + 65, ly - 70); c.fill(); c.fillRect(lx - 60, ly + 60, 120, 18);
+  c.lineWidth = 5; c.beginPath(); c.arc(lx, ly - 132, 14, 0, 7); c.stroke();
+  // Croix rayonnante, référence, filets, verset, « Amen » manuscrit
+  const or = '#9a6a2e', brun = '#3a2618';
+  c.save(); c.translate(540, 150); c.strokeStyle = or; c.fillStyle = or; c.lineWidth = 3;
+  c.fillRect(-4, -46, 8, 92); c.fillRect(-26, -24, 52, 8);
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; c.beginPath(); c.moveTo(Math.cos(a) * 50, Math.sin(a) * 50 - 10); c.lineTo(Math.cos(a) * 70, Math.sin(a) * 70 - 10); c.stroke(); }
+  c.restore();
+  filet(c, 240, or, 150);
+  c.textAlign = 'center'; c.fillStyle = brun; c.font = `600 56px Georgia, "Times New Roman", serif`; spacing(c, '3px'); c.fillText(v.r.toUpperCase(), 540, 325); spacing(c, '0px');
+  filet(c, 370, or, 200);
+  const T = fitText(c, v.t.trim(), s => `600 ${s}px ${SERIF}`, 660, 560, 78, 32, 1.22);
+  let y = 440 + Math.max(0, (560 - T.h) / 2) + T.size * .85;
+  c.save(); c.shadowColor = 'rgba(255,245,225,.8)'; c.shadowBlur = 16; c.fillStyle = brun; c.font = `600 ${T.size}px ${SERIF}`;
+  for (const l of T.lines) { c.fillText(l, 540, y); y += T.lh; }
+  c.restore();
+  const fy = Math.min(y - T.lh + 60, 1060); filet(c, fy, or, 160, 'coeur');
+  c.fillStyle = or; c.font = `400 96px ${SCRIPT}`; c.save(); c.shadowColor = 'rgba(255,240,210,.8)'; c.shadowBlur = 12; c.fillText('Amen !', 540, fy + 110); c.restore();
+  brandMark(c, 1830, icon, true);
+}
+const STYLES_IMG = { lumiere: 'Lumière', eclat: 'Éclat', page: 'Page surlignée', montagne: 'Montagnes', lac: 'Lac', jardin: 'Jardin', veillee: 'Veillée' };
+
 // Style « Lumière » : fond crème ensoleillé, ombres de feuillage, Bible ouverte, typographie classique
 function drawLumiere(c, v, icon) {
   const W = 1080, H = 1920, serif = '"Cormorant Garamond", Georgia, serif';
@@ -472,11 +726,12 @@ function drawLumiere(c, v, icon) {
 async function verseImage(v, style) {
   const W = 1080, H = 1920, nuit = style === 'veillee';
   const fam = nuit ? '"Cormorant Garamond", Georgia, serif' : '"Plus Jakarta Sans", system-ui, sans-serif';
-  try { await Promise.all([document.fonts.load(`600 60px "Cormorant Garamond"`), document.fonts.load(`italic 600 60px "Cormorant Garamond"`), document.fonts.load(`700 60px "Plus Jakarta Sans"`)]); } catch (e) {}
+  try { await Promise.all([document.fonts.load(`600 60px "Cormorant Garamond"`), document.fonts.load(`italic 600 60px "Cormorant Garamond"`), document.fonts.load(`700 60px "Plus Jakarta Sans"`), document.fonts.load(`400 60px "Great Vibes"`)]); } catch (e) {}
   const icon = await loadShareIcon();
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
-  if (style === 'lumiere') { drawLumiere(c, v, icon); return new Promise(res => cv.toBlob(res, 'image/png')); }
+  const autres = { lumiere: drawLumiere, eclat: drawEclat, page: drawPage, montagne: drawMontagne, lac: drawLac };
+  if (autres[style]) { c.save(); autres[style](c, v, icon, seeded(Math.random() * 1e9)); c.restore(); return new Promise(res => cv.toBlob(res, 'image/png')); }
   // Fond
   let g = c.createLinearGradient(0, 0, W * .4, H);
   if (nuit) { g.addColorStop(0, '#2a3470'); g.addColorStop(.55, '#141a3a'); g.addColorStop(1, '#0d1128'); }
@@ -535,7 +790,8 @@ let shareUrl = null;
 function closeShare() { shareBack.hidden = true; if (shareUrl) { URL.revokeObjectURL(shareUrl); shareUrl = null; } }
 async function openShare(v) {
   if (!shareBack.isConnected) document.body.append(shareBack);
-  let style = 'lumiere', blob = null;
+  const ids = Object.keys(STYLES_IMG), auHasard = sauf => { const l = ids.filter(x => x !== sauf); return l[Math.floor(Math.random() * l.length)]; };
+  let style = auHasard(), blob = null;
   const box = shareBack.firstChild, img = h('img', { class: 'share-prev', alt: `Image du verset ${v.r}` });
   const msg = h('p', { class: 'small muted share-msg' });
   const file = () => new File([blob], `verset-${v.r.replace(/[^\p{L}\d]+/gu, '-')}.png`, { type: 'image/png' });
@@ -545,8 +801,9 @@ async function openShare(v) {
     if (shareUrl) URL.revokeObjectURL(shareUrl);
     shareUrl = URL.createObjectURL(blob); img.src = shareUrl; img.style.opacity = '1';
   };
-  const styles = h('div', { class: 'seg' }, [['lumiere', 'Lumière'], ['jardin', 'Jardin'], ['veillee', 'Veillée']].map(([id, nom]) => h('button', {
-    class: style === id ? 'on' : '', onclick: e => { style = id; [...styles.children].forEach(b => b.classList.toggle('on', b === e.currentTarget)); draw(); } }, nom)));
+  const nomStyle = h('span', { class: 'share-style' }, STYLES_IMG[style]);
+  const styles = h('div', { class: 'share-row' }, nomStyle,
+    h('button', { class: 'btn alt share-other', onclick: () => { style = auHasard(style); nomStyle.textContent = STYLES_IMG[style]; draw(); } }, '🔀 Une autre image'));
   const shareImg = async () => {
     if (!blob) return;
     const f = file();
