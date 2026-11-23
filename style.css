@@ -470,3 +470,6 @@ html[data-theme="veillee"] .hour-verse .share-link{background:rgba(217,183,112,.
 .share-sheet .btn.block{margin-top:8px}
 .btn.share-wa{background:#25d366;color:#06361b}
 .share-msg:empty{display:none}
+.btn.share-wa small{display:block;font-weight:500;font-size:.8rem;opacity:.8;margin-top:2px}
+.share-txt{text-align:center;font-size:.85rem;color:var(--muted);margin:10px 0 0}
+.share-txt .sel-link{font-size:.85rem}

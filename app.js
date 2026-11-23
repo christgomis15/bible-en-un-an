@@ -350,6 +350,125 @@ function loadShareIcon() {
   return shareIcon = new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = 'icons/icon-192.png'; });
 }
 // Image au format story (1080 × 1920) : style Jardin (vert) ou Veillée (nuit étoilée)
+// Style « Lumière » : fond crème ensoleillé, ombres de feuillage, Bible ouverte, typographie classique
+function drawLumiere(c, v, icon) {
+  const W = 1080, H = 1920, serif = '"Cormorant Garamond", Georgia, serif';
+  let s = 11; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  // Mur crème, lumière venant de la droite
+  let g = c.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#efe4d3'); g.addColorStop(.45, '#f7f0e5'); g.addColorStop(1, '#eadcc6');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const sun = c.createRadialGradient(W * .78, H * .28, 40, W * .78, H * .28, 900);
+  sun.addColorStop(0, 'rgba(255,250,238,.95)'); sun.addColorStop(1, 'rgba(255,250,238,0)');
+  c.fillStyle = sun; c.fillRect(0, 0, W, H);
+  // Rayon de fenêtre (bande claire en biais)
+  c.save(); c.translate(W * .62, 0); c.rotate(.18);
+  const ray = c.createLinearGradient(-160, 0, 160, 0);
+  ray.addColorStop(0, 'rgba(255,255,255,0)'); ray.addColorStop(.5, 'rgba(255,255,255,.35)'); ray.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = ray; c.fillRect(-160, -100, 320, H * 1.2); c.restore();
+  // Ombres de feuillage (floues) en haut à gauche et à droite
+  const branch = (x, y, ang, len, alpha, blur) => {
+    c.save(); c.filter = `blur(${blur}px)`; c.fillStyle = `rgba(92,72,52,${alpha})`; c.strokeStyle = `rgba(92,72,52,${alpha})`;
+    c.translate(x, y); c.rotate(ang); c.lineWidth = 5; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(len * .5, -len * .08, len, len * .05); c.stroke();
+    for (let i = 1; i < 11; i++) {
+      const t = i / 11, px = len * t, py = -len * .05 * Math.sin(t * Math.PI), side = i % 2 ? 1 : -1;
+      c.save(); c.translate(px, py); c.rotate(side * (.7 + rnd() * .3)); c.beginPath(); c.ellipse(34, 0, 38 + rnd() * 10, 14, 0, 0, 7); c.fill(); c.restore();
+    }
+    c.restore();
+  };
+  branch(-40, 120, .35, 520, .13, 7); branch(-60, 360, .05, 420, .09, 10); branch(W + 40, 40, Math.PI - .5, 480, .11, 8); branch(W + 30, 300, Math.PI - .15, 360, .08, 11);
+  // Brin de feuillage net, en haut à gauche (couleur douce)
+  c.save(); c.translate(40, 40); c.rotate(.55); c.strokeStyle = '#8a9a78'; c.fillStyle = '#9fae8a'; c.lineWidth = 4;
+  c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(140, -10, 260, 30); c.stroke();
+  for (let i = 1; i < 8; i++) { const t = i / 8; c.save(); c.translate(260 * t, 30 * t * t - 10 * Math.sin(t * 3)); c.rotate((i % 2 ? 1 : -1) * .8); c.globalAlpha = .75; c.beginPath(); c.ellipse(20, 0, 24, 9, 0, 0, 7); c.fill(); c.restore(); }
+  c.fillStyle = '#fffaf0'; for (let i = 0; i < 6; i++) { c.beginPath(); c.arc(200 + rnd() * 90, -20 + rnd() * 60, 7, 0, 7); c.fill(); }
+  c.restore();
+
+  const brun = '#3d2f24', cuivre = '#a0784f', doux = '#8a7462';
+  c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+  const lettre = x => { if ('letterSpacing' in c) c.letterSpacing = x; };
+  // Ornement : filet doré + petite fleur
+  const orn = y => {
+    const lg = c.createLinearGradient(W / 2 - 200, 0, W / 2 + 200, 0);
+    lg.addColorStop(0, 'rgba(160,120,79,0)'); lg.addColorStop(.5, cuivre); lg.addColorStop(1, 'rgba(160,120,79,0)');
+    c.strokeStyle = lg; c.lineWidth = 2.5; c.beginPath(); c.moveTo(W / 2 - 200, y); c.lineTo(W / 2 - 26, y); c.moveTo(W / 2 + 26, y); c.lineTo(W / 2 + 200, y); c.stroke();
+    c.save(); c.translate(W / 2, y); c.fillStyle = cuivre;
+    for (let i = 0; i < 4; i++) { c.rotate(Math.PI / 2); c.beginPath(); c.ellipse(0, -10, 5, 10, 0, 0, 7); c.fill(); }
+    c.beginPath(); c.arc(0, 0, 3.5, 0, 7); c.fillStyle = '#f7f0e5'; c.fill(); c.restore();
+  };
+  // Taille du verset : la plus grande qui tient (840 px de large, 700 px de haut au plus)
+  const maxW = 840;
+  let size = 82, lines, lh;
+  for (; size >= 36; size -= 2) {
+    c.font = `600 ${size}px ${serif}`;
+    lines = wrapLines(c, `“\u00a0${v.t.trim()}\u00a0”`, maxW); lh = size * 1.28;
+    if (lines.length * lh <= 700) break;
+  }
+  // Tout le bloc (icône, référence, verset, « Parole de Dieu », cœur) est centré entre le haut et la signature
+  const blockH = 60 + 80 + 45 + 70 + lines.length * lh + 45 + 72 + 80;
+  const y0 = 130 + Math.max(0, (1300 - 130 - blockH) / 2);
+  // Petite Bible ouverte (dessin au trait)
+  c.save(); c.translate(W / 2, y0 + 30); c.strokeStyle = brun; c.lineWidth = 3.2; c.lineJoin = 'round';
+  c.beginPath(); c.moveTo(0, -18); c.quadraticCurveTo(-26, -30, -52, -24); c.lineTo(-52, 24); c.quadraticCurveTo(-26, 18, 0, 30); c.quadraticCurveTo(26, 18, 52, 24); c.lineTo(52, -24); c.quadraticCurveTo(26, -30, 0, -18); c.closePath(); c.stroke();
+  c.beginPath(); c.moveTo(0, -18); c.lineTo(0, 30); c.stroke(); c.restore();
+  // Référence en capitales espacées (chiffres bien lisibles)
+  c.fillStyle = brun; c.font = `600 40px "Plus Jakarta Sans", system-ui, sans-serif`; lettre('7px');
+  c.fillText(v.r.toUpperCase(), W / 2, y0 + 140); lettre('0px');
+  orn(y0 + 185);
+  // Verset
+  let y = y0 + 255 + size * .85;
+  c.fillStyle = brun; c.font = `600 ${size}px ${serif}`;
+  for (const l of lines) { c.fillText(l, W / 2, y); y += lh; }
+  // Second ornement, « Parole de Dieu » en italique, cœur au trait
+  const yo = y - lh + size * .35 + 45;
+  orn(yo);
+  c.fillStyle = cuivre; c.font = `italic 600 48px ${serif}`;
+  c.fillText('Parole de Dieu', W / 2, yo + 72);
+  c.save(); c.translate(W / 2, yo + 122); c.strokeStyle = cuivre; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(0, 22); c.bezierCurveTo(-34, -2, -22, -26, 0, -8); c.bezierCurveTo(22, -26, 34, -2, 0, 22); c.stroke(); c.restore();
+
+  // Bible ouverte posée en bas (perspective)
+  const bt = 1470, cx = W / 2;
+  c.save(); c.filter = 'blur(18px)'; c.fillStyle = 'rgba(70,50,30,.30)'; c.beginPath(); c.ellipse(cx, 1890, 560, 70, 0, 0, 7); c.fill(); c.restore();
+  // Tranche et couverture
+  c.fillStyle = '#4a3324'; c.beginPath(); c.moveTo(cx, 1905); c.quadraticCurveTo(cx - 280, 1870, -30, 1910); c.lineTo(-30, 1940); c.lineTo(W + 30, 1940); c.lineTo(W + 30, 1910); c.quadraticCurveTo(cx + 280, 1870, cx, 1905); c.fill();
+  for (let k = 0; k < 7; k++) { // épaisseur des pages
+    c.strokeStyle = k % 2 ? '#e2d3ba' : '#d4c2a4'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(cx, 1890 - k * 4); c.quadraticCurveTo(cx - 280, 1855 - k * 4, -20, 1895 - k * 5); c.stroke();
+    c.beginPath(); c.moveTo(cx, 1890 - k * 4); c.quadraticCurveTo(cx + 280, 1855 - k * 4, W + 20, 1895 - k * 5); c.stroke();
+  }
+  const page = side => {
+    const e = side * 600;
+    c.beginPath(); c.moveTo(cx, bt + 40);
+    c.bezierCurveTo(cx + side * 120, bt - 30, cx + side * 380, bt - 20, cx + e, bt + 40);
+    c.lineTo(cx + e, 1860);
+    c.bezierCurveTo(cx + side * 380, 1800, cx + side * 140, 1830, cx, 1868);
+    c.closePath();
+    const pg = c.createLinearGradient(cx, 0, cx + e, 0);
+    pg.addColorStop(0, '#d9c8ab'); pg.addColorStop(.12, '#f4ead9'); pg.addColorStop(.7, '#fbf5ea'); pg.addColorStop(1, '#efe2cc');
+    c.fillStyle = pg; c.fill();
+    // lignes de texte suivant la courbure
+    c.save(); c.clip();
+    c.strokeStyle = 'rgba(70,55,40,.22)'; c.lineWidth = 3;
+    for (let i = 0; i < 15; i++) {
+      const t = i / 15, yy = bt + 70 + t * 300, x0 = cx + side * 70, x1 = cx + side * 540;
+      c.beginPath(); c.moveTo(x0, yy + 10 - 30 * (1 - t)); c.quadraticCurveTo(cx + side * 250, yy - 40 * (1 - t * .6), x1, yy + 8); c.stroke();
+    }
+    c.restore();
+  };
+  page(-1); page(1);
+  const sp = c.createLinearGradient(cx - 50, 0, cx + 50, 0);
+  sp.addColorStop(0, 'rgba(90,65,40,0)'); sp.addColorStop(.5, 'rgba(90,65,40,.35)'); sp.addColorStop(1, 'rgba(90,65,40,0)');
+  c.fillStyle = sp; c.fillRect(cx - 50, bt - 10, 100, 420);
+  // Signet
+  c.strokeStyle = '#7a2e2a'; c.lineWidth = 7; c.beginPath(); c.moveTo(cx + 8, bt + 60); c.quadraticCurveTo(cx + 30, 1800, cx - 10, 1935); c.stroke();
+  // Signature de l'appli, discrète
+  if (icon) { c.save(); c.beginPath(); c.roundRect ? c.roundRect(W / 2 - 245, 1352, 56, 56, 14) : c.rect(W / 2 - 245, 1352, 56, 56); c.clip(); c.drawImage(icon, W / 2 - 245, 1352, 56, 56); c.restore(); }
+  c.textAlign = 'left'; c.fillStyle = brun; c.font = `700 34px "Plus Jakarta Sans", system-ui, sans-serif`;
+  c.fillText('Bible en un an', W / 2 - 172, 1380);
+  c.fillStyle = doux; c.font = `500 25px "Plus Jakarta Sans", system-ui, sans-serif`;
+  c.fillText('Appli gratuite · bible-en-un-an.vercel.app', W / 2 - 172, 1410);
+}
 async function verseImage(v, style) {
   const W = 1080, H = 1920, nuit = style === 'veillee';
   const fam = nuit ? '"Cormorant Garamond", Georgia, serif' : '"Plus Jakarta Sans", system-ui, sans-serif';
@@ -357,6 +476,7 @@ async function verseImage(v, style) {
   const icon = await loadShareIcon();
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
+  if (style === 'lumiere') { drawLumiere(c, v, icon); return new Promise(res => cv.toBlob(res, 'image/png')); }
   // Fond
   let g = c.createLinearGradient(0, 0, W * .4, H);
   if (nuit) { g.addColorStop(0, '#2a3470'); g.addColorStop(.55, '#141a3a'); g.addColorStop(1, '#0d1128'); }
@@ -415,7 +535,7 @@ let shareUrl = null;
 function closeShare() { shareBack.hidden = true; if (shareUrl) { URL.revokeObjectURL(shareUrl); shareUrl = null; } }
 async function openShare(v) {
   if (!shareBack.isConnected) document.body.append(shareBack);
-  let style = document.documentElement.getAttribute('data-theme') === 'veillee' ? 'veillee' : 'jardin', blob = null;
+  let style = 'lumiere', blob = null;
   const box = shareBack.firstChild, img = h('img', { class: 'share-prev', alt: `Image du verset ${v.r}` });
   const msg = h('p', { class: 'small muted share-msg' });
   const file = () => new File([blob], `verset-${v.r.replace(/[^\p{L}\d]+/gu, '-')}.png`, { type: 'image/png' });
@@ -425,17 +545,19 @@ async function openShare(v) {
     if (shareUrl) URL.revokeObjectURL(shareUrl);
     shareUrl = URL.createObjectURL(blob); img.src = shareUrl; img.style.opacity = '1';
   };
-  const styles = h('div', { class: 'seg' }, [['jardin', 'Jardin'], ['veillee', 'Veillée']].map(([id, nom]) => h('button', {
+  const styles = h('div', { class: 'seg' }, [['lumiere', 'Lumière'], ['jardin', 'Jardin'], ['veillee', 'Veillée']].map(([id, nom]) => h('button', {
     class: style === id ? 'on' : '', onclick: e => { style = id; [...styles.children].forEach(b => b.classList.toggle('on', b === e.currentTarget)); draw(); } }, nom)));
   const shareImg = async () => {
     if (!blob) return;
     const f = file();
     if (navigator.canShare && navigator.canShare({ files: [f] })) {
       try { await navigator.share({ files: [f], text: `${v.r} · ${SITE}` }); } catch (e) {}
-    } else {
-      downloadBlob(f.name, 'image/png', blob);
-      msg.textContent = 'Image enregistrée : ajoutez-la à votre statut WhatsApp ou à votre story depuis vos photos.';
-    }
+    } else saveImg();
+  };
+  const saveImg = () => {
+    if (!blob) return;
+    downloadBlob(file().name, 'image/png', blob);
+    msg.textContent = 'Image enregistrée dans vos téléchargements : vous pouvez l’ajouter à votre statut WhatsApp ou à votre story depuis vos photos.';
   };
   const shareWa = () => { window.open('https://wa.me/?text=' + encodeURIComponent(shareText(v)), '_blank', 'noopener'); };
   const shareOther = async () => {
@@ -446,10 +568,10 @@ async function openShare(v) {
   box.replaceChildren(
     h('div', { class: 'picker-head' }, h('div', { class: 'kicker' }, 'Partager ce verset'), h('button', { class: 'sel-link', onclick: closeShare }, 'Fermer')),
     img, styles,
-    h('button', { class: 'btn block share-wa', onclick: shareWa }, 'Envoyer sur WhatsApp'),
-    h('button', { class: 'btn block alt', onclick: shareImg }, 'Partager l’image (statut, story…)'),
-    h('button', { class: 'btn block alt', onclick: shareOther }, 'Autres applications…'),
-    msg);
+    h('button', { class: 'btn block share-wa', onclick: shareImg }, 'Partager l’image', h('small', null, 'WhatsApp, statut, Instagram, Facebook…')),
+    h('button', { class: 'btn block alt', onclick: saveImg }, 'Enregistrer l’image'),
+    msg,
+    h('p', { class: 'share-txt' }, 'Texte seulement : ', h('button', { class: 'sel-link', onclick: shareWa }, 'WhatsApp'), ' · ', h('button', { class: 'sel-link', onclick: shareOther }, 'autres applis')));
   shareBack.hidden = false;
   await draw();
 }
