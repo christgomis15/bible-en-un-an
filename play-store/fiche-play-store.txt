@@ -42,8 +42,11 @@ Un style clair et frais pendant la journée, un style de nuit doux pour les yeux
 📶 FONCTIONNE SANS INTERNET
 Une fois installée, l'application fonctionne même hors connexion.
 
+📱 TÉLÉPHONE, TABLETTE, ORDINATEUR
+Un code personnel (ou un QR code) suffit pour retrouver votre progression sur tous vos appareils. Pas d'inscription, pas de mot de passe.
+
 🔒 RESPECT DE VOTRE VIE PRIVÉE
-Aucun compte, aucune publicité, aucun suivi. Votre progression et vos versets restent sur votre téléphone.
+Aucune inscription, aucune publicité, aucun suivi. Votre progression reste sur votre appareil ; si vous créez un profil, elle est chiffrée et lisible seulement avec votre code.
 
 « Ta parole est une lampe à mes pieds, et une lumière sur mon sentier. » Psaume 119:105
 
@@ -104,7 +107,7 @@ Sécurité des données (questionnaire) :
       · Obligatoire ou facultative : FACULTATIVE (l'utilisateur choisit d'activer les notifications)
       · Raison : « Fonctionnement de l'application »
   - Type de données collectées : « Activité dans les applications » > « Autres actions dans l'application »
-      (seulement si le rappel de lecture est activé : date de départ du plan et jours lus)
+      (seulement si le rappel de lecture est activé ou si un profil est créé ; le profil est chiffré de bout en bout)
       · Collectée : OUI      · Partagée : NON
       · Traitée de façon éphémère : NON
       · Obligatoire ou facultative : FACULTATIVE

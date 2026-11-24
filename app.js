@@ -187,6 +187,8 @@ function norm(s) {
   if (!(s.version in VERSIONS)) s.version = 'lsg';
   s.jeux = Object.assign({ qp: 'tout', src: 'connus', niv: 'facile' }, s.jeux);
   for (const g of ['qcm', 'trous']) s.jeux[g] = Object.assign({ n: 0, best: 0 }, s.jeux[g]);
+  s.mt = s.mt && typeof s.mt === 'object' ? s.mt : {}; // dates de modification (synchronisation entre appareils)
+  s.prenom = typeof s.prenom === 'string' ? s.prenom.slice(0, 30) : '';
   if (!s.pos) s.pos = { b: 42, c: 1 }; // dernier chapitre ouvert dans l'onglet Bible (Jean 1)
   return s;
 }
@@ -197,7 +199,7 @@ function load() {
 // Catégorie d'un verset surligné (les anciens surlignages vont dans la première catégorie)
 const catOf = key => S.cats.find(c => c.id === S.hl[key]) || S.cats[0];
 const fond = c => c + '59'; // couleur à ~35 % d'opacité
-function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} try { syncLecture(); } catch (e) {} }
+function save() { try { stamp(); } catch (e) {} try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} try { syncLecture(); } catch (e) {} try { schedSync(); } catch (e) {} }
 
 /* ---------- Calendrier du plan (lundi – samedi) ---------- */
 function stateOn(date) {
@@ -277,7 +279,10 @@ function welcome() {
     input,
     h('p', null,
       h('button', { class: 'btn', onclick: () => startOn(input.value) }, 'Commencer'),
-      h('button', { class: 'btn alt', onclick: () => startOn(iso(today())) }, 'Commencer aujourd’hui')));
+      h('button', { class: 'btn alt', onclick: () => startOn(iso(today())) }, 'Commencer aujourd’hui')),
+    window.crypto && crypto.subtle ? h('details', { class: 'more-hours' }, h('summary', null, 'J’ai déjà commencé sur un autre appareil'),
+      h('p', { class: 'small' }, 'Tapez le code personnel affiché dans Réglages → Mon profil sur votre autre appareil :'),
+      linkForm(() => { V.tab = 'today'; render(); })) : null);
 }
 function startOn(s) {
   if (!s) return;
@@ -896,7 +901,7 @@ function helloBlock() {
   const day = st.k === 'day' ? `Jour ${st.n} / ${PLAN.length}` : st.k === 'rest' ? 'Dimanche, jour de repos' : '';
   return h('div', { class: 'hello' },
     h('div', { class: 'hello-row' },
-      h('div', null, h('small', null, cap(fmtLong(today()))), h('h2', null, `${salut}, que Dieu bénisse ${moment}`)),
+      h('div', null, h('small', null, cap(fmtLong(today()))), h('h2', null, `${salut}${S.prenom ? ' ' + S.prenom : ''}, que Dieu bénisse ${moment}`)),
       ring),
     h('div', { class: 'hello-bar' }, h('span', null, day), h('div', { class: 'bar' }, h('i', { style: `width:${Math.max(2, pct)}%` })), h('span', null, `${pct.toLocaleString('fr-FR')} %`)));
 }
@@ -1622,11 +1627,191 @@ function shiftPlan() {
   S.start = iso(d); save(); V.day = null; V.tab = 'today'; render();
 }
 
+/* ---------- Profil : retrouver sa progression sur tous ses appareils ----------
+   Pas d'inscription : un code personnel (9 caractères). Le serveur ne reçoit qu'une empreinte du code
+   et la progression chiffrée sur l'appareil (AES-GCM, clé tirée du code) : illisible sans le code.
+   Chaque modification est datée (S.mt) : en cas de changements sur deux appareils, la plus récente l'emporte. */
+const PROFIL_KEY = 'bible-an-profil';
+const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sans I, L, O, 0, 1 (faciles à confondre)
+let P = null; try { P = JSON.parse(localStorage.getItem(PROFIL_KEY)) || null; } catch (e) {}
+const saveP = () => { try { if (P) localStorage.setItem(PROFIL_KEY, JSON.stringify(P)); else localStorage.removeItem(PROFIL_KEY); } catch (e) {} };
+const fmtCode = c => c.match(/.{3}/g).join('-');
+const normCode = s => (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const codeOk = c => c.length === 9 && [...c].every(x => CODE_ABC.includes(x));
+function newCode() { const a = new Uint32Array(9); crypto.getRandomValues(a); return [...a].map(x => CODE_ABC[x % CODE_ABC.length]).join(''); }
+const profilUrl = code => `${SITE}/?profil=${fmtCode(code)}`;
+// Dates de modification : relevées automatiquement à chaque enregistrement (save)
+let snap = snapOf(S);
+function snapOf(s) { return { done: { ...s.done }, hl: { ...s.hl }, start: s.start, cats: JSON.stringify(s.cats), prenom: s.prenom || '' }; }
+function stamp() {
+  if (!snap) { snap = snapOf(S); return; }
+  const now = Date.now(), mt = S.mt;
+  for (const k of new Set([...Object.keys(snap.done), ...Object.keys(S.done)])) if (snap.done[k] !== S.done[k]) mt['d' + k] = now;
+  for (const k of new Set([...Object.keys(snap.hl), ...Object.keys(S.hl)])) if (snap.hl[k] !== S.hl[k]) mt['h' + k] = now;
+  if (snap.start !== S.start) mt.start = now;
+  if (snap.cats !== JSON.stringify(S.cats)) mt.cats = now;
+  if (snap.prenom !== (S.prenom || '')) mt.prenom = now;
+  snap = snapOf(S);
+}
+const syncData = () => ({ v: 1, start: S.start, done: S.done, hl: S.hl, cats: S.cats, prenom: S.prenom || '', jeux: { qcm: S.jeux.qcm, trous: S.jeux.trous }, mt: S.mt });
+// Réunit la progression d'un autre appareil (r) avec celle-ci
+function mergeRemote(r) {
+  const mtL = S.mt, mtR = r.mt || {}, mt = { ...mtL };
+  const win = k => { const a = mtL[k] || 0, b = mtR[k] || 0; return b > a ? 'r' : a > b ? 'l' : '='; };
+  const take = k => { if (mtR[k]) mt[k] = Math.max(mt[k] || 0, mtR[k]); };
+  const map = (lm, rm, p) => {
+    const keys = new Set([...Object.keys(lm), ...Object.keys(rm || {}), ...[...Object.keys(mtL), ...Object.keys(mtR)].filter(x => x[0] === p).map(x => x.slice(1))]);
+    const out = {};
+    for (const k of keys) {
+      const w = win(p + k), val = w === 'r' ? (rm || {})[k] : w === 'l' ? lm[k] : (lm[k] !== undefined ? lm[k] : (rm || {})[k]);
+      if (val !== undefined && val !== null) out[k] = val;
+      take(p + k);
+    }
+    return out;
+  };
+  S.done = map(S.done, r.done, 'd');
+  S.hl = map(S.hl, r.hl, 'h');
+  for (const k of ['start', 'cats']) { const w = win(k); if (w === 'r' || (w === '=' && r[k])) S[k] = r[k]; take(k); }
+  { const w = win('prenom'); if (w === 'r' || (w === '=' && !S.prenom && r.prenom)) S.prenom = r.prenom || ''; take('prenom'); }
+  for (const g of ['qcm', 'trous']) { const o = (r.jeux || {})[g] || {}; S.jeux[g] = { n: Math.max(S.jeux[g].n, o.n || 0), best: Math.max(S.jeux[g].best, o.best || 0) }; }
+  S.mt = mt;
+  S = norm(S);
+}
+// Chiffrement
+const TXT = new TextEncoder();
+const toB64 = buf => { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const fromB64 = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+let keyCache = {};
+async function profilKeys(code) {
+  if (keyCache.code === code) return keyCache;
+  const base = await crypto.subtle.importKey('raw', TXT.encode(code), 'PBKDF2', false, ['deriveBits']);
+  const bits = salt => crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: TXT.encode('bible-en-un-an/' + salt), iterations: 60000 }, base, 256);
+  const id = [...new Uint8Array(await bits('id'))].map(b => b.toString(16).padStart(2, '0')).join('');
+  const key = await crypto.subtle.importKey('raw', await bits('cle'), 'AES-GCM', false, ['encrypt', 'decrypt']);
+  return keyCache = { code, id, key };
+}
+async function encrypt(key, text) { const iv = crypto.getRandomValues(new Uint8Array(12)); const c = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, TXT.encode(text)); return { iv: toB64(iv), c: toB64(c) }; }
+async function decrypt(key, iv, c) { return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(iv) }, key, fromB64(c))); }
+// Synchronisation : lire la version en ligne, réunir, renvoyer si besoin
+let syncing = null, syncT = 0, syncEtat = '';
+function schedSync(ms = 2500) { if (!P) return; clearTimeout(syncT); syncT = setTimeout(() => syncNow(), ms); }
+function saveQuiet() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} snap = snapOf(S); try { syncLecture(); } catch (e) {} }
+function syncNow() {
+  if (!P || !(window.crypto && crypto.subtle)) return Promise.resolve(false);
+  if (syncing) return syncing;
+  syncEtat = 'encours'; updateProfilStatus();
+  syncing = (async () => {
+    const k = await profilKeys(P.code);
+    for (let essai = 0; essai < 3; essai++) {
+      const r = await fetch('api/profil?id=' + k.id, { cache: 'no-store' });
+      let remote = null, rev = 0, remoteTxt = '';
+      if (r.status === 200) { const j = await r.json(); rev = j.rev; remoteTxt = await decrypt(k.key, j.iv, j.c); remote = JSON.parse(remoteTxt); }
+      else if (r.status !== 404) throw new Error('serveur ' + r.status);
+      const avant = JSON.stringify(syncData());
+      if (remote) mergeRemote(remote);
+      const apres = JSON.stringify(syncData());
+      if (apres !== avant) { saveQuiet(); if (document.visibilityState === 'visible' && !(document.activeElement && document.activeElement.matches('input,textarea'))) rerender(); }
+      if (apres !== remoteTxt) {
+        const { iv, c } = await encrypt(k.key, apres);
+        const pr = await fetch('api/profil', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: k.id, rev, iv, c }) });
+        if (pr.status === 409) continue; // un autre appareil vient d'écrire : on recommence
+        if (!pr.ok) throw new Error('serveur ' + pr.status);
+        rev = (await pr.json()).rev;
+      }
+      P.last = Date.now(); P.rev = rev; saveP(); syncEtat = 'ok'; return true;
+    }
+    throw new Error('conflit');
+  })().catch(e => { syncEtat = navigator.onLine === false ? 'horsligne' : 'erreur'; return false; })
+    .finally(() => { syncing = null; updateProfilStatus(); });
+  return syncing;
+}
+async function createProfil() { P = { code: newCode(), rev: 0, last: 0 }; saveP(); await syncNow(); }
+async function linkProfil(code) {
+  const k = await profilKeys(code);
+  const r = await fetch('api/profil?id=' + k.id, { cache: 'no-store' });
+  if (r.status === 404) throw new Error('inconnu');
+  if (!r.ok) throw new Error('réseau');
+  P = { code, rev: 0, last: 0 }; saveP();
+  if (!await syncNow()) throw new Error('réseau');
+}
+function profilStatusText() {
+  if (!P) return '';
+  if (syncEtat === 'encours') return 'Synchronisation…';
+  if (syncEtat === 'horsligne') return 'Pas de connexion : la synchronisation se fera au retour du réseau.';
+  if (syncEtat === 'erreur') return 'La synchronisation n’a pas abouti. Elle sera retentée automatiquement.';
+  if (P.last) { const d = new Date(P.last); return `✓ Synchronisé ${iso(d) === iso(new Date()) ? 'aujourd’hui' : 'le ' + d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} à ${pad(d.getHours())} h ${pad(d.getMinutes())}`; }
+  return '';
+}
+function updateProfilStatus() { const el = document.getElementById('profil-status'); if (el) { el.textContent = profilStatusText(); el.className = 'small ' + (syncEtat === 'ok' ? 'ok-txt' : 'muted'); } }
+function loadQR() {
+  if (window.qrcode) return Promise.resolve();
+  return new Promise((ok, ko) => { const s = document.createElement('script'); s.src = 'lib/qrcode.min.js'; s.onload = ok; s.onerror = ko; document.head.append(s); });
+}
+// Formulaire « J'ai déjà un code » (Réglages et page d'accueil)
+function linkForm(after) {
+  const inp = h('input', { type: 'text', class: 'code-in', placeholder: 'ABC-DEF-GHJ', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', 'aria-label': 'Code personnel', maxlength: 13 });
+  const msg = h('p', { class: 'small' });
+  const go = async () => {
+    const code = normCode(inp.value);
+    if (!codeOk(code)) { msg.textContent = 'Ce code n’est pas valide : il comporte 9 lettres et chiffres, par exemple ABC-DEF-GHJ.'; msg.className = 'small ko-txt'; return; }
+    msg.textContent = 'Un instant…'; msg.className = 'small muted';
+    try { await linkProfil(code); msg.textContent = ''; if (after) after(); else rerender(); }
+    catch (e) { msg.className = 'small ko-txt'; msg.textContent = e.message === 'inconnu' ? 'Aucun profil ne correspond à ce code. Vérifiez-le sur votre autre appareil.' : 'Impossible de joindre le serveur : vérifiez votre connexion et réessayez.'; }
+  };
+  return h('div', { class: 'link-form' }, h('div', { class: 'code-row' }, inp, h('button', { class: 'btn', onclick: go }, 'Relier')), msg);
+}
+function profilCard() {
+  const prenomIn = h('input', { type: 'text', value: S.prenom || '', placeholder: 'Votre prénom', maxlength: 30, autocomplete: 'given-name',
+    onchange: e => { S.prenom = e.target.value.trim().slice(0, 30); save(); } });
+  const head = [h('h2', null, 'Mon profil'), h('label', { class: 'f' }, 'Prénom (facultatif, pour vous saluer)'), prenomIn];
+  if (!(window.crypto && crypto.subtle)) return h('div', { class: 'card' }, ...head, h('p', { class: 'small muted' }, 'Ce navigateur ne permet pas la synchronisation entre appareils.'));
+  const status = h('p', { id: 'profil-status', class: 'small ' + (syncEtat === 'ok' || (P && P.last && !syncEtat) ? 'ok-txt' : 'muted') }, profilStatusText());
+  const run = fn => async () => { status.textContent = 'Un instant…'; try { await fn(); } catch (e) { status.textContent = 'Échec : vérifiez votre connexion et réessayez.'; return; } rerender(); };
+  if (!P) return h('div', { class: 'card profil-card' }, ...head,
+    h('p', { class: 'small' }, 'Retrouvez votre progression, vos versets surlignés et vos scores sur votre téléphone, votre tablette et votre ordinateur. Pas d’inscription ni de mot de passe : l’appli vous donne un code personnel.'),
+    h('button', { class: 'btn block', onclick: run(createProfil) }, 'Créer mon profil'), status,
+    h('hr', { class: 'sep' }),
+    h('p', { class: 'small' }, h('b', null, 'Vous avez déjà un profil sur un autre appareil ?'), ' Tapez votre code : votre progression sur cet appareil sera réunie avec celle du profil.'),
+    linkForm());
+  const code = fmtCode(P.code);
+  const qr = h('div', { class: 'qr-box' });
+  const details = h('details', { class: 'more-hours', ontoggle: e => { if (e.target.open && !qr.firstChild) loadQR().then(() => { const q = qrcode(0, 'M'); q.addData(profilUrl(P.code)); q.make(); qr.innerHTML = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); }).catch(() => { qr.textContent = 'QR code indisponible hors connexion.'; }); } },
+    h('summary', null, 'Utiliser mon profil sur un autre appareil'),
+    h('p', { class: 'small' }, 'Avec l’appareil photo de l’autre appareil, scannez ce QR code. Ou bien, sur l’autre appareil, ouvrez l’appli, allez dans Réglages → Mon profil, et tapez votre code.'), qr);
+  const copy = h('button', { class: 'btn alt', onclick: async () => { try { await navigator.clipboard.writeText(code); copy.textContent = 'Copié ✓'; setTimeout(() => { copy.textContent = 'Copier'; }, 1500); } catch (e) { prompt('Votre code :', code); } } }, 'Copier');
+  return h('div', { class: 'card profil-card' }, ...head,
+    h('p', { class: 'f' }, 'Votre code personnel'),
+    h('div', { class: 'code-big' }, code),
+    h('p', { class: 'small muted' }, 'Gardez-le précieusement : c’est la seule clé de votre profil. Personne, pas même nous, ne peut le retrouver ni lire votre progression sans lui.'),
+    h('p', null,
+      h('button', { class: 'btn', onclick: () => window.open('https://wa.me/?text=' + encodeURIComponent(`Mon code personnel « Bible en un an » : ${code}\nÀ garder précieusement. Pour relier un appareil : ${profilUrl(P.code)}`), '_blank', 'noopener') }, 'M’envoyer le code sur WhatsApp'),
+      copy),
+    details,
+    status,
+    h('p', null, h('button', { class: 'btn alt', onclick: () => syncNow() }, 'Synchroniser maintenant')),
+    h('hr', { class: 'sep' }),
+    h('p', { class: 'small' },
+      h('button', { class: 'sel-link', onclick: () => { if (confirm('Ne plus synchroniser cet appareil ? Votre progression reste sur cet appareil et sur le profil en ligne ; vous pourrez le relier à nouveau avec votre code.')) { P = null; saveP(); rerender(); } } }, 'Ne plus synchroniser cet appareil'),
+      ' · ',
+      h('button', { class: 'sel-link', onclick: run(async () => { if (!confirm('Supprimer définitivement votre profil en ligne ? Votre progression reste sur cet appareil, mais vos autres appareils ne seront plus synchronisés.')) return; const k = await profilKeys(P.code); const r = await fetch('api/profil', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: k.id }) }); if (!r.ok) throw new Error('serveur'); P = null; saveP(); }) }, 'Supprimer mon profil en ligne')));
+}
+// Lien reçu (QR code scanné) : ?profil=ABC-DEF-GHJ
+async function profilFromUrl() {
+  const qs = new URLSearchParams(location.search), code = normCode(qs.get('profil'));
+  if (!qs.has('profil')) return;
+  history.replaceState(null, '', location.pathname);
+  if (!codeOk(code) || (P && P.code === code)) return;
+  if (!confirm(`Relier cet appareil au profil ${fmtCode(code)} ?\n\nVotre progression sur cet appareil sera réunie avec celle de vos autres appareils.`)) return;
+  try { await linkProfil(code); V.tab = 'today'; render(); alert('Cet appareil est relié à votre profil ✓'); }
+  catch (e) { alert(e.message === 'inconnu' ? 'Aucun profil ne correspond à ce code.' : 'Impossible de joindre le serveur : réessayez depuis Réglages → Mon profil.'); }
+}
+
 /* ---------- Réglages ---------- */
 function viewSettings() {
   const startIn = h('input', { type: 'date', value: S.start });
   const fileIn = h('input', { type: 'file', accept: 'application/json', style: 'display:none', onchange: importData });
   return [
+    profilCard(),
     ...installCard(),
     themeCard(),
     ...pushCard(),
@@ -1642,11 +1827,11 @@ function viewSettings() {
       h('button', { class: 'btn alt', onclick: exportData }, 'Exporter ma progression'),
       h('button', { class: 'btn alt', onclick: () => fileIn.click() }, 'Importer'), fileIn,
       h('hr', { class: 'sep' }),
-      h('button', { class: 'btn alt', onclick: () => { if (confirm('Effacer toute la progression et recommencer ?')) { S = norm(); save(); V.day = null; V.tab = 'today'; render(); } } }, 'Tout réinitialiser')),
+      h('button', { class: 'btn alt', onclick: () => { if (confirm(P ? 'Effacer toute la progression et recommencer ? Elle sera aussi effacée sur vos autres appareils reliés à votre profil.' : 'Effacer toute la progression et recommencer ?')) { S = norm(); save(); V.day = null; V.tab = 'today'; render(); } } }, 'Tout réinitialiser')),
     h('div', { class: 'card small muted' },
       versionLine(),
       h('p', null, 'Textes bibliques : Louis Segond (1910) et Darby (1885), domaine public. La Bible du Semeur (© Biblica) n’est pas incluse : l’application renvoie vers les sources officielles.'),
-      h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous activez les notifications, seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et les heures choisies sont conservés (et, pour le rappel de lecture, la date de départ du plan et les numéros des jours lus). Tout est effacé dès que vous désactivez.'),
+      h('p', null, 'Aucune donnée personnelle n’est collectée : votre progression reste sur cet appareil. Si vous créez un profil, votre progression est enregistrée en ligne de façon chiffrée, lisible seulement avec votre code personnel. Si vous activez les notifications, seuls l’adresse technique de notification de votre navigateur, votre fuseau horaire et les heures choisies sont conservés (et, pour le rappel de lecture, la date de départ du plan et les numéros des jours lus). Tout est effacé dès que vous désactivez.'),
       h('p', null, h('a', { href: 'confidentialite.html' }, 'Politique de confidentialité')))
   ];
 }
@@ -1928,6 +2113,10 @@ document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click
 
 if (window.BIBLE_LSG && window.BIBLE_PLAN) {
   LSG = TEXTS.lsg = window.BIBLE_LSG; PLAN = window.BIBLE_PLAN; TOTAL_CHARS = PLAN.reduce((a, d) => a + d.n, 0); render();
+  if (P) syncNow();
+  profilFromUrl();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') schedSync(300); });
+  addEventListener('online', () => schedSync(500));
   if (S.lect.on) checkPushSub(); // remet à jour le serveur (jours lus hors connexion…)
   if (S.version !== 'lsg') loadVersion(S.version).then(() => { FOLDED = null; rerender(); }, () => {});
   if (window.VERSETS && VERSETS.length) {
