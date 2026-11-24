@@ -486,3 +486,51 @@ html[data-theme="veillee"] .hour-verse .share-link{background:rgba(217,183,112,.
 .code-row .btn{margin:0}
 .qr-box{background:#fff;border-radius:14px;padding:10px;width:220px;max-width:100%;margin:8px 0}
 .qr-box svg{display:block;width:100%;height:auto}
+
+/* Prier avec la Parole */
+.pri-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}
+.pri-tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;background:var(--card);border:1px solid transparent;border-radius:18px;padding:14px;box-shadow:var(--shadow);font:inherit;color:var(--ink);cursor:pointer;min-height:132px;-webkit-tap-highlight-color:transparent}
+.pri-tile b{font-size:.95rem;line-height:1.25}
+.pri-tile small{color:var(--muted);font-size:.75rem;margin-top:auto;font-weight:600}
+.pri-tile.fait{border-color:color-mix(in srgb,var(--ok) 45%,transparent)}
+.pri-tile.fait small{color:var(--ok)}
+html[data-theme="veillee"] .pri-tile{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08);box-shadow:none}
+html[data-theme="veillee"] .pri-tile b{font-family:var(--display);font-size:1.15rem;font-weight:600}
+.pri-ic{flex:none;font-size:1.5rem;line-height:1;width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--gold-soft)}
+.pri-art{font-size:1.9rem;background:var(--gold-soft)}
+.pri-today{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:var(--ink);cursor:pointer}
+.pri-today .pt-txt{flex:1;display:flex;flex-direction:column}
+.pri-today small{color:var(--muted);font-size:.78rem;font-weight:600}
+.pri-today b{font-size:1.02rem}
+html[data-theme="veillee"] .pri-today b{font-family:var(--display);font-size:1.3rem;font-weight:600}
+.pt-go{font-size:1.7rem;color:var(--muted);line-height:1}
+.pri-back{margin:0 0 6px}
+.pri-ref{font-weight:800;color:var(--brand);font-size:.88rem;letter-spacing:.01em}
+.pri-txt{margin:6px 0 12px;font-family:var(--read-font);font-size:calc(1.08rem * var(--read-scale));line-height:1.6;font-weight:var(--read-weight)}
+.pri-txt.big{font-size:calc(1.3rem * var(--read-scale));line-height:1.55}
+.pri-pray{background:var(--gold-soft);border-radius:14px;padding:10px 14px 12px}
+html[data-theme="veillee"] .pri-pray{background:rgba(217,183,112,.12)}
+.pp-k{display:block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--brand)}
+.pri-pray p{margin:4px 0 0;font-style:italic;line-height:1.55}
+.pri-v .ref-acts{margin-top:10px}
+.pri-sub{margin:18px 4px 8px;font-size:1rem;color:var(--brand)}
+html[data-theme="veillee"] .pri-sub{font-family:var(--display);font-size:1.3rem;font-weight:600;color:var(--gold)}
+.pri-final{font-style:italic;line-height:1.6;margin:6px 0 12px}
+.pri-final.big{font-family:var(--read-font);font-size:calc(1.15rem * var(--read-scale))}
+.pri-done{border-radius:14px;padding:10px 14px;margin:0;font-weight:700;color:var(--ok)}
+.pri-noms{margin:10px 0 6px}
+.pri-noms label{display:block;font-weight:700;font-size:.85rem;margin-bottom:6px}
+.card .pri-noms input{flex:1 1 180px;min-width:0;max-width:none;margin:0}
+.pri-noms p{margin:6px 0 0}
+.pri-how ol{margin:6px 0 10px;padding-left:1.3em}
+.pri-how li{margin:0 0 6px}
+.pri-hint{color:var(--muted);font-size:.85rem;margin:0 0 8px}
+.pri-step .ref-acts{margin-top:10px}
+.pri-dots{display:flex;gap:5px;justify-content:center;margin:0 0 12px;flex-wrap:wrap}
+.pri-dots i{width:8px;height:8px;border-radius:9px;background:var(--line)}
+.pri-dots i.ok{background:color-mix(in srgb,var(--brand) 45%,var(--line))}
+.pri-dots i.on{background:var(--brand);width:20px}
+/* 7 onglets : un peu plus serrés sur les petits écrans */
+@media (max-width:430px){.tabs button{font-size:.62rem;letter-spacing:-.01em;padding-left:0;padding-right:0}.tabs button .ic{padding:4px 9px}}
+@media (max-width:350px){.tabs button{font-size:.58rem}.tabs button .ic{padding:4px 6px}}
+.pri-end .chap-foot{margin:12px 0 0}

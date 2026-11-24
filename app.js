@@ -166,7 +166,7 @@ function migreCats(s) {
   s.cats = neuf;
 }
 let S = load();
-const V = { g: null, tab: 'today', day: null, ver: 'txt', loadingVer: null, sel: new Set(), bv: 'read', bb: null, bc: 1, vback: 'chapters', q: '', qMax: 100, goto: null };
+const V = { g: null, tab: 'today', day: null, ver: 'txt', loadingVer: null, sel: new Set(), bv: 'read', bb: null, bc: 1, vback: 'chapters', q: '', qMax: 100, goto: null, pt: null, pg: null };
 
 function norm(s) {
   s = Object.assign({ start: null, done: {}, font: 19, remind: '06:30' }, s || {});
@@ -189,6 +189,8 @@ function norm(s) {
   for (const g of ['qcm', 'trous']) s.jeux[g] = Object.assign({ n: 0, best: 0 }, s.jeux[g]);
   s.mt = s.mt && typeof s.mt === 'object' ? s.mt : {}; // dates de modification (synchronisation entre appareils)
   s.prenom = typeof s.prenom === 'string' ? s.prenom.slice(0, 30) : '';
+  s.pri = Object.assign({ enf: '', fam: '', n: 0, fait: {} }, s.pri); // Prier avec la Parole : prénoms, nombre de temps de prière
+  if (!s.pri.fait || typeof s.pri.fait !== 'object') s.pri.fait = {};
   if (!s.pos) s.pos = { b: 42, c: 1 }; // dernier chapitre ouvert dans l'onglet Bible (Jean 1)
   return s;
 }
@@ -247,7 +249,7 @@ const view = $('#view');
 let renderedDay = '';
 function checkNewDay() {
   if (!S.start || iso(today()) === renderedDay || V.sel.size) return;
-  if (V.tab === 'bible' || V.tab === 'games') { renderedDay = iso(today()); return; } // ne pas perdre la lecture ou la partie en cours
+  if (V.tab === 'bible' || V.tab === 'games' || V.tab === 'prayer') { renderedDay = iso(today()); return; } // ne pas perdre la lecture ou la partie en cours
   if (V.tab === 'today') V.day = null;
   render();
 }
@@ -260,8 +262,8 @@ function render() {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === V.tab));
   view.replaceChildren();
   clearSel();
-  if (!S.start && V.tab !== 'bible' && V.tab !== 'games') { view.append(welcome()); return; }
-  const fn = { today: viewToday, bible: viewBible, games: viewGames, plan: viewPlan, progress: viewProgress, settings: viewSettings }[V.tab];
+  if (!S.start && V.tab !== 'bible' && V.tab !== 'games' && V.tab !== 'prayer') { view.append(welcome()); return; }
+  const fn = { today: viewToday, bible: viewBible, prayer: viewPriere, games: viewGames, plan: viewPlan, progress: viewProgress, settings: viewSettings }[V.tab];
   view.append(...[].concat(fn()).filter(Boolean));
   window.scrollTo(0, 0);
   if (V.goto) { const sp = verseEl(V.goto); V.goto = null; if (sp) { sp.scrollIntoView({ block: 'center' }); sp.classList.add('flash'); } }
@@ -879,6 +881,7 @@ function viewToday() {
   if (onToday) {
     const top = [helloBlock(), hourCard()];
     if (cur && cur.k === 'day') top.push(todayHero(cur.n), miniStats());
+    top.push(priTodayCard());
     out.unshift(...top); scheduleHourRefresh();
   }
   return out;
@@ -1549,6 +1552,134 @@ function gapView() {
             it.tries ? h('button', { class: 'sel-link', onclick: reveal }, 'Voir la réponse') : null))];
 }
 
+/* ---------- Prier avec la Parole : sujets de prière, versets et prière tirée de chaque verset ---------- */
+const PRI = () => window.PRIERE || [];
+function parsePriRef(r) { // "Psaumes 51:1-2,10" → { b, c, parts: [[1, 2], [10, 10]] } ; "3 Jean 4" → chapitre 1, verset 4
+  const m = r.match(/^(.+) (\d+)(?::([\d,-]+))?$/), b = BOOKS.findIndex(x => x[0] === m[1]);
+  if (!m[3]) return { b, c: 1, parts: [[+m[2], +m[2]]] };
+  return { b, c: +m[2], parts: m[3].split(',').map(p => { const [a, z] = p.split('-').map(Number); return [a, z || a]; }) };
+}
+const priLabel = r => r.replace(/,/g, ' et ').replace(/^Psaumes /, 'Psaume ');
+function priVerse(r) {
+  const p = parsePriRef(r), seg = [];
+  for (const [a, z] of p.parts) { const t = []; for (let v = a; v <= z; v++) t.push(verseTxt(p.b, p.c, v)); seg.push(t.join(' ')); }
+  return { b: p.b, c: p.c, v: p.parts[0][0], t: seg.join(' […] '), r: priLabel(r), nom: VERSIONS[ver()].nom };
+}
+// Prénoms glissés dans la prière : {E} enfants, {F} proches ; {E:a|b} = a pour un seul prénom, b sinon
+const nomsList = s => (s || '').split(/\s*(?:[,;\n]|\set\s)\s*/).map(x => x.trim()).filter(Boolean);
+const joinNoms = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' et ' + a[a.length - 1];
+function fillNoms(t) {
+  const g = { E: nomsList(S.pri.enf), F: nomsList(S.pri.fam) }, def = { E: 'mes enfants', F: 'mes proches' };
+  return t.replace(/\{([EF])(?::([^|}]*)\|([^}]*))?\}/g, (_, k, a, b) => a === undefined ? (g[k].length ? joinNoms(g[k]) : def[k]) : (g[k].length === 1 ? a : b));
+}
+const priCount = t => t.v.filter(Array.isArray).length;
+const priDuJour = () => { const l = PRI(); return l[Math.floor(today().getTime() / 864e5 + 0.5) % l.length]; };
+function openPri(id, guide) { V.tab = 'prayer'; V.pt = id; V.pg = guide ? 0 : null; render(); }
+function markPrayed(t) {
+  const d = iso(today());
+  if (S.pri.fait[t.id] !== d) { S.pri.fait[t.id] = d; S.pri.n++; save(); }
+}
+const prayedToday = t => S.pri.fait[t.id] === iso(today());
+function viewPriere() {
+  const t = PRI().find(x => x.id === V.pt);
+  if (t && V.pg != null) return priGuide(t);
+  if (t) return priTheme(t);
+  V.pt = null; return priHome();
+}
+function priTodayCard() {
+  const t = priDuJour(); if (!t) return null;
+  return h('button', { class: 'card pri-today', onclick: () => openPri(t.id) },
+    h('span', { class: 'pri-ic' }, t.ic),
+    h('span', { class: 'pt-txt' }, h('small', null, 'Prier avec la Parole · sujet du jour'), h('b', null, t.t)),
+    h('span', { class: 'pt-go', 'aria-hidden': 'true' }, '›'));
+}
+function priHome() {
+  const n = S.pri.n;
+  return [
+    h('div', { class: 'card games-hero pri-hero' },
+      h('div', { class: 'gh-deco', 'aria-hidden': 'true' }, '✦'),
+      h('div', { class: 'gh-kicker' }, 'Prier avec la Parole'),
+      h('h2', null, 'Appuyer ma prière sur la Parole de Dieu'),
+      h('p', null, 'Choisissez un sujet. Lisez chaque verset, puis faites-en votre prière.'),
+      n ? h('p', { class: 'gh-count' }, `${n} temps de prière avec la Parole · continuez !`) : null),
+    h('div', { class: 'pri-grid' }, PRI().map(t => h('button', { class: 'pri-tile' + (prayedToday(t) ? ' fait' : ''), onclick: () => openPri(t.id) },
+      h('span', { class: 'pri-ic' }, t.ic), h('b', null, t.t), h('small', null, prayedToday(t) ? 'Prié aujourd’hui ✓' : `${priCount(t)} versets`)))),
+    h('div', { class: 'card pri-how' },
+      h('h2', null, 'Comment prier avec ces versets'),
+      h('ol', null,
+        h('li', null, 'Lisez le verset lentement, à voix haute si vous le pouvez.'),
+        h('li', null, 'Redites-le à Dieu avec vos mots, à la première personne. Par exemple, avec Jacques 1:19 : « Seigneur, rends-moi prompt à écouter, lent à parler, lent à me mettre en colère. »'),
+        h('li', null, 'Pour vos enfants et votre famille, mettez leurs prénoms dans la prière : l’appli peut le faire pour vous.'),
+        h('li', null, 'Terminez en remerciant Dieu : il est fidèle à sa Parole.')),
+      h('p', { class: 'muted small' }, 'Versets de la Louis Segond 1910. Chaque prière proposée n’est qu’un exemple : dites-la avec votre cœur.'))
+  ];
+}
+function nomsEditor(k) {
+  const key = k === 'E' ? 'enf' : 'fam';
+  const inp = h('input', { type: 'text', value: S.pri[key], maxlength: 150, placeholder: k === 'E' ? 'Ex. : Paul, Marie' : 'Ex. : Papa, Awa, Jean', 'aria-label': k === 'E' ? 'Prénoms de mes enfants' : 'Prénoms de mes proches' });
+  const ok = () => { S.pri[key] = inp.value.trim().slice(0, 150); save(); rerender(); };
+  return h('form', { class: 'pri-noms', onsubmit: e => { e.preventDefault(); ok(); } },
+    h('label', null, k === 'E' ? 'Prénoms de mes enfants' : 'Prénoms des personnes de ma famille'),
+    h('div', { class: 'code-row' }, inp, h('button', { class: 'btn', type: 'submit' }, 'Mettre dans la prière')),
+    h('p', { class: 'muted small' }, 'Facultatif. Séparez les prénoms par une virgule. Ils restent sur votre appareil.'));
+}
+function priVerseCard(it) {
+  const v = priVerse(it[0]);
+  return h('div', { class: 'card pri-v' },
+    h('div', { class: 'pri-ref' }, v.r),
+    h('blockquote', { class: 'pri-txt' }, v.t),
+    h('div', { class: 'pri-pray' }, h('span', { class: 'pp-k' }, '🙏 Ma prière'), h('p', null, fillNoms(it[1]))),
+    h('div', { class: 'ref-acts' }, h('button', { class: 'ctx-link', onclick: () => openBible(v.b, v.c, v.v) }, 'Lire dans son contexte ›'), shareBtn(v)));
+}
+function priAmen(t, after) {
+  return prayedToday(t)
+    ? h('p', { class: 'fb-ok pri-done' }, 'Amen ✓ Que Dieu vous bénisse et vous garde.')
+    : h('button', { class: 'btn block', onclick: () => { markPrayed(t); after(); } }, 'Amen 🙏 J’ai prié');
+}
+function priTheme(t) {
+  const out = [
+    h('div', { class: 'picker-head pri-back' }, h('button', { class: 'sel-link', onclick: () => { V.pt = null; render(); } }, '‹ Sujets de prière'), h('span')),
+    h('div', { class: 'card pri-head' },
+      h('div', { class: 'gc-head' }, h('div', { class: 'gc-art pri-art' }, t.ic), h('div', null, h('div', { class: 'kicker' }, `${priCount(t)} versets`), h('h2', null, t.t))),
+      h('p', { class: 'small' }, t.d),
+      t.noms ? nomsEditor(t.noms) : null,
+      h('button', { class: 'btn block play', onclick: () => { V.pg = 0; render(); } }, 'Prier pas à pas ▸'),
+      h('p', { class: 'muted small center' }, 'Un verset à la fois, avec sa prière. Ou lisez la liste ci-dessous.'))];
+  for (const it of t.v) out.push(Array.isArray(it) ? priVerseCard(it) : h('h3', { class: 'pri-sub' }, it.h));
+  out.push(h('div', { class: 'card pri-end' },
+    h('div', { class: 'kicker' }, 'Pour conclure'),
+    h('p', { class: 'pri-final' }, fillNoms(t.p)),
+    priAmen(t, rerender)));
+  return out;
+}
+function priGuide(t) {
+  const items = t.v.filter(Array.isArray), n = items.length, i = Math.min(V.pg, n);
+  const go = d => { V.pg = Math.max(0, i + d); render(); };
+  const quit = h('button', { class: 'sel-link', onclick: () => { V.pg = null; render(); } }, 'Quitter');
+  const dots = h('div', { class: 'pri-dots', 'aria-hidden': 'true' }, Array.from({ length: n + 1 }, (_, k) => h('i', { class: k < i ? 'ok' : k === i ? 'on' : '' })));
+  if (i === n) return [
+    h('div', { class: 'picker-head' }, h('span', { class: 'muted small' }, t.t), quit), dots,
+    h('div', { class: 'card pri-step pri-end' },
+      h('div', { class: 'kicker' }, 'Pour conclure'),
+      h('p', { class: 'pri-final big' }, fillNoms(t.p)),
+      priAmen(t, render),
+      h('div', { class: 'chap-foot' },
+        h('button', { class: 'btn alt', onclick: () => go(-1) }, '‹ Retour'),
+        h('button', { class: 'btn alt', onclick: () => { V.pg = null; V.pt = null; render(); } }, 'Autres sujets')))];
+  const it = items[i], v = priVerse(it[0]);
+  return [
+    h('div', { class: 'picker-head' }, h('span', { class: 'muted small' }, `${t.ic} ${t.t} · ${i + 1} / ${n}`), quit), dots,
+    h('div', { class: 'card pri-step' },
+      h('div', { class: 'pri-ref' }, v.r),
+      h('blockquote', { class: 'pri-txt big' }, v.t),
+      h('p', { class: 'pri-hint' }, 'Lisez-le lentement… puis priez :'),
+      h('div', { class: 'pri-pray' }, h('span', { class: 'pp-k' }, '🙏 Ma prière'), h('p', null, fillNoms(it[1]))),
+      h('div', { class: 'ref-acts' }, shareBtn(v))),
+    h('div', { class: 'chap-foot' },
+      h('button', { class: 'btn alt', disabled: i === 0, onclick: () => go(-1) }, '‹ Précédent'),
+      h('button', { class: 'btn', onclick: () => go(1) }, i === n - 1 ? 'Conclure ›' : 'Verset suivant ›'))];
+}
+
 /* ---------- Plan ---------- */
 function viewPlan() {
   const cur = currentDayNumber(), t = today(), st = stateOn(t);
@@ -1642,7 +1773,7 @@ function newCode() { const a = new Uint32Array(9); crypto.getRandomValues(a); re
 const profilUrl = code => `${SITE}/?profil=${fmtCode(code)}`;
 // Dates de modification : relevées automatiquement à chaque enregistrement (save)
 let snap = snapOf(S);
-function snapOf(s) { return { done: { ...s.done }, hl: { ...s.hl }, start: s.start, cats: JSON.stringify(s.cats), prenom: s.prenom || '' }; }
+function snapOf(s) { return { done: { ...s.done }, hl: { ...s.hl }, start: s.start, cats: JSON.stringify(s.cats), prenom: s.prenom || '', pri: JSON.stringify([s.pri.enf, s.pri.fam]) }; }
 function stamp() {
   if (!snap) { snap = snapOf(S); return; }
   const now = Date.now(), mt = S.mt;
@@ -1651,9 +1782,10 @@ function stamp() {
   if (snap.start !== S.start) mt.start = now;
   if (snap.cats !== JSON.stringify(S.cats)) mt.cats = now;
   if (snap.prenom !== (S.prenom || '')) mt.prenom = now;
+  if (snap.pri !== JSON.stringify([S.pri.enf, S.pri.fam])) mt.pri = now;
   snap = snapOf(S);
 }
-const syncData = () => ({ v: 1, start: S.start, done: S.done, hl: S.hl, cats: S.cats, prenom: S.prenom || '', jeux: { qcm: S.jeux.qcm, trous: S.jeux.trous }, mt: S.mt });
+const syncData = () => ({ v: 1, start: S.start, done: S.done, hl: S.hl, cats: S.cats, prenom: S.prenom || '', pri: { enf: S.pri.enf, fam: S.pri.fam, n: S.pri.n }, jeux: { qcm: S.jeux.qcm, trous: S.jeux.trous }, mt: S.mt });
 // Réunit la progression d'un autre appareil (r) avec celle-ci
 function mergeRemote(r) {
   const mtL = S.mt, mtR = r.mt || {}, mt = { ...mtL };
@@ -1673,6 +1805,7 @@ function mergeRemote(r) {
   S.hl = map(S.hl, r.hl, 'h');
   for (const k of ['start', 'cats']) { const w = win(k); if (w === 'r' || (w === '=' && r[k])) S[k] = r[k]; take(k); }
   { const w = win('prenom'); if (w === 'r' || (w === '=' && !S.prenom && r.prenom)) S.prenom = r.prenom || ''; take('prenom'); }
+  if (r.pri) { const w = win('pri'); if (w === 'r' || (w === '=' && !S.pri.enf && !S.pri.fam)) { S.pri.enf = r.pri.enf || ''; S.pri.fam = r.pri.fam || ''; } take('pri'); S.pri.n = Math.max(S.pri.n, r.pri.n || 0); }
   for (const g of ['qcm', 'trous']) { const o = (r.jeux || {})[g] || {}; S.jeux[g] = { n: Math.max(S.jeux[g].n, o.n || 0), best: Math.max(S.jeux[g].best, o.best || 0) }; }
   S.mt = mt;
   S = norm(S);
@@ -2109,7 +2242,7 @@ function openLecture() {
 }
 /* ---------- Démarrage ---------- */
 applyTheme();
-document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => { V.tab = b.dataset.tab; if (V.tab === 'today') V.day = null; if (V.tab === 'bible') V.bv = 'read'; render(); }));
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => { if (b.dataset.tab === 'prayer' && V.tab === 'prayer') { V.pt = null; V.pg = null; } V.tab = b.dataset.tab; if (V.tab === 'today') V.day = null; if (V.tab === 'bible') V.bv = 'read'; render(); }));
 
 if (window.BIBLE_LSG && window.BIBLE_PLAN) {
   LSG = TEXTS.lsg = window.BIBLE_LSG; PLAN = window.BIBLE_PLAN; TOTAL_CHARS = PLAN.reduce((a, d) => a + d.n, 0); render();
