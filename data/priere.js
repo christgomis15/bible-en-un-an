@@ -4,6 +4,31 @@
 // {E} = prénoms des enfants (ou « mes enfants »), {F} = prénoms des proches (ou « les membres de ma famille »).
 // {E:a|b} : « a » s'il n'y a qu'un prénom, « b » sinon (même chose avec {F:a|b}).
 window.PRIERE = [
+  { id: 'adoration', ic: '✨', t: 'Adorer Dieu', d: 'L’adorer pour qui il est : saint, grand, digne de toute gloire.',
+    v: [
+      { h: 'Pour qui il est' },
+      ['Ésaïe 6:3', 'Saint, saint, saint es-tu, Éternel des armées ! Toute la terre est pleine de ta gloire. Je t’adore.'],
+      ['Exode 15:11', 'Qui est comme toi, Seigneur ? Personne n’est aussi saint, aussi magnifique que toi. Tu es digne de louange.'],
+      ['1 Chroniques 29:11', 'À toi, Éternel, la grandeur, la force, la gloire et le règne. Tout t’appartient, et tu règnes au-dessus de tout.'],
+      ['Psaumes 145:3', 'Tu es grand, Seigneur, et ta grandeur est insondable. Je ne finirai jamais de te découvrir et de te louer.'],
+      ['Psaumes 8:9', 'Éternel, notre Seigneur, que ton nom est magnifique sur toute la terre ! Je bénis ton nom.'],
+      ['Apocalypse 4:11', 'Tu es digne, Seigneur, de recevoir la gloire, l’honneur et la puissance, car tu as créé toutes choses, et moi aussi.'],
+      ['1 Timothée 1:17', 'Roi des siècles, immortel, invisible, seul Dieu : à toi l’honneur et la gloire, pour toujours. Amen.'],
+      { h: 'Jésus, l’Agneau de Dieu' },
+      ['Apocalypse 5:12', 'Jésus, Agneau immolé pour moi, tu es digne de recevoir la puissance, la richesse, la sagesse, la force, l’honneur, la gloire et la louange.'],
+      ['Philippiens 2:9-11', 'Seigneur Jésus, ton nom est au-dessus de tout nom. Je fléchis le genou devant toi et je confesse que tu es Seigneur.'],
+      ['Jude 25', 'Dieu, mon Sauveur, par Jésus-Christ : à toi la gloire, la majesté, la force et la puissance, hier, aujourd’hui et pour toujours.'],
+      { h: 'De tout mon être' },
+      ['Psaumes 95:6', 'Je me prosterne et je m’humilie devant toi, Éternel, mon créateur. Je fléchis le genou devant toi.'],
+      ['Jean 4:23-24', 'Père, fais de moi un vrai adorateur. Je veux t’adorer en esprit et en vérité.'],
+      ['Psaumes 29:2', 'Je rends gloire à ton nom, Seigneur. Je me prosterne devant ta sainteté.'],
+      ['Psaumes 63:3-4', 'Ta bonté vaut mieux que la vie. Mes lèvres te louent, et j’élève mes mains en ton nom.'],
+      ['Romains 12:1', 'Seigneur, je t’offre mon corps et toute ma vie comme un sacrifice vivant. Que tout ce que je fais soit un culte pour toi.'],
+      ['Hébreux 13:15', 'Par Jésus, je t’offre sans cesse un sacrifice de louange : mes lèvres confessent ton nom.'],
+      ['Psaumes 150:6', 'Avec tout ce qui respire, je te loue, Éternel ! Alléluia !']
+    ],
+    p: 'Seigneur, tu es saint, tu es grand, tu es digne. Je ne viens pas d’abord te demander quelque chose : je viens t’adorer pour qui tu es. Reçois ma louange, mon cœur et toute ma vie. À toi la gloire, aux siècles des siècles. Au nom de Jésus. Amen.' },
+
   { id: 'grace', ic: '🙌', t: 'Rendre grâce à Dieu', d: 'Remercier Dieu pour qui il est et pour tout ce qu’il fait.',
     v: [
       ['Psaumes 136:1', 'Seigneur, je te loue, car tu es bon. Ta miséricorde envers moi ne s’arrête jamais.'],
